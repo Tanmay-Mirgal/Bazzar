@@ -16,19 +16,31 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 
+import { getCurrentUser, logout } from '@/lib/api/auth';
+import { User as UserType } from '@/types/user';
+import { ShieldCheck, LogOut } from 'lucide-react';
+
 export function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
   const [searchQuery, setSearchQuery] = React.useState('');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const [mounted, setMounted] = React.useState(false);
+  const [currentUser, setCurrentUser] = React.useState<UserType | null>(null);
 
   const cartItems = useCartStore((state) => state.cartItems);
   const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
   React.useEffect(() => {
     setMounted(true);
-  }, []);
+    setCurrentUser(getCurrentUser());
+  }, [pathname]);
+
+  const handleLogout = () => {
+    logout();
+    setCurrentUser(null);
+    router.push('/');
+  };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,6 +58,8 @@ export function Navbar() {
     { href: '/products?category=Clothing', label: 'Fashion' },
     { href: '/products?category=Books', label: 'Books' },
   ];
+
+  const isAdmin = currentUser?.role === 'ROLE_ADMIN' || currentUser?.email === 'admin@bazzar.com';
 
   return (
     <header className="sticky top-0 z-50 w-full flex-col">
@@ -87,6 +101,18 @@ export function Navbar() {
                   </Link>
                 );
               })}
+
+              <Link
+                href="/admin"
+                className={`px-3 py-1.5 rounded-full transition-all text-xs font-bold flex items-center gap-1.5 ${
+                  pathname.startsWith('/admin')
+                    ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md'
+                    : 'text-amber-600 hover:bg-amber-50 border border-amber-200/80'
+                }`}
+              >
+                <ShieldCheck className="h-3.5 w-3.5" />
+                Admin Dashboard
+              </Link>
             </nav>
           </div>
 
@@ -95,27 +121,17 @@ export function Navbar() {
             {/* Desktop Search Input */}
             <form
               onSubmit={handleSearchSubmit}
-              className="hidden sm:flex relative items-center w-56 md:w-72"
+              className="hidden sm:flex relative items-center w-56 md:w-64"
             >
               <Search className="absolute left-3.5 h-4 w-4 text-slate-400" />
               <Input
                 type="text"
-                placeholder="Search 1,000+ items..."
+                placeholder="Search products..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9 pr-4 h-10 text-xs rounded-full border-slate-200 bg-slate-50/80 focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-indigo-500 transition-all shadow-xs"
               />
             </form>
-
-            {/* Wishlist Icon */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="hidden md:flex rounded-full text-slate-700 hover:text-pink-600 hover:bg-pink-50 transition-colors"
-              aria-label="Wishlist"
-            >
-              <Heart className="h-5 w-5" />
-            </Button>
 
             {/* Cart Link with Animated Badge */}
             <Link href="/cart">
@@ -137,17 +153,35 @@ export function Navbar() {
               </Button>
             </Link>
 
-            {/* User Account / Sign In */}
-            <Link href="/login" className="hidden sm:block">
-              <Button
-                variant="default"
-                size="sm"
-                className="h-9 px-4 rounded-full font-semibold text-xs bg-slate-900 hover:bg-indigo-600 text-white transition-all shadow-sm"
-              >
-                <User className="h-3.5 w-3.5 mr-1.5" />
-                Sign In
-              </Button>
-            </Link>
+            {/* User Account State */}
+            {mounted && currentUser ? (
+              <div className="hidden sm:flex items-center gap-2">
+                <Badge variant="outline" className="bg-slate-100 text-slate-800 font-bold text-xs px-3 py-1.5 rounded-full border-slate-200">
+                  <User className="h-3.5 w-3.5 mr-1 text-indigo-600" />
+                  {currentUser.name} {isAdmin && '(Admin)'}
+                </Badge>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleLogout}
+                  className="rounded-full text-slate-500 hover:text-rose-600 hover:bg-rose-50"
+                  title="Sign Out"
+                >
+                  <LogOut className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <Link href="/login" className="hidden sm:block">
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="h-9 px-4 rounded-full font-semibold text-xs bg-slate-900 hover:bg-indigo-600 text-white transition-all shadow-sm"
+                >
+                  <User className="h-3.5 w-3.5 mr-1.5" />
+                  Sign In
+                </Button>
+              </Link>
+            )}
 
             {/* Mobile Menu Trigger */}
             <div className="lg:hidden">

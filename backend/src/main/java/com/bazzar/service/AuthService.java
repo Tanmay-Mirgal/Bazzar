@@ -49,6 +49,7 @@ public class AuthService {
                 .name(request.getName())
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
+                .role(com.bazzar.entity.Role.ROLE_USER)
                 .build();
         user = userRepository.save(user);
 
@@ -75,20 +76,25 @@ public class AuthService {
     }
 
     private String generateToken(User user) {
+        String roleName = user.getRole() != null ? user.getRole().name() : "ROLE_USER";
         org.springframework.security.core.userdetails.UserDetails userDetails =
                 org.springframework.security.core.userdetails.User.builder()
                         .username(user.getEmail())
                         .password(user.getPassword())
-                        .authorities(Collections.emptyList())
+                        .authorities(Collections.singletonList(
+                                new org.springframework.security.core.authority.SimpleGrantedAuthority(roleName)
+                        ))
                         .build();
         return jwtService.generateToken(userDetails);
     }
 
     private AuthResponse buildAuthResponse(String token, User user) {
+        String roleName = user.getRole() != null ? user.getRole().name() : "ROLE_USER";
         UserResponse userResponse = UserResponse.builder()
                 .id(user.getId())
                 .name(user.getName())
                 .email(user.getEmail())
+                .role(roleName)
                 .build();
         return AuthResponse.builder()
                 .token(token)

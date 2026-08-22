@@ -35,6 +35,11 @@ public class OrderController {
         return ResponseEntity.ok(orderService.getUserOrders(user));
     }
 
+    @GetMapping("/all")
+    public ResponseEntity<List<OrderResponse>> getAllOrders() {
+        return ResponseEntity.ok(orderService.getAllOrders());
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<OrderResponse> getUserOrderById(
             @AuthenticationPrincipal User user,

@@ -19,18 +19,40 @@ public class DataInitializer implements CommandLineRunner {
 
     private final CategoryRepository categoryRepository;
     private final ProductRepository productRepository;
+    private final com.bazzar.repository.UserRepository userRepository;
+    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+    private final com.bazzar.repository.CartRepository cartRepository;
 
     public DataInitializer(CategoryRepository categoryRepository,
-                           ProductRepository productRepository) {
+                           ProductRepository productRepository,
+                           com.bazzar.repository.UserRepository userRepository,
+                           org.springframework.security.crypto.password.PasswordEncoder passwordEncoder,
+                           com.bazzar.repository.CartRepository cartRepository) {
         this.categoryRepository = categoryRepository;
         this.productRepository = productRepository;
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.cartRepository = cartRepository;
     }
 
     @Override
     public void run(String... args) {
-        // Only seed if the database is empty
+        // Seed Admin user if not present
+        if (!userRepository.existsByEmail("admin@bazzar.com")) {
+            com.bazzar.entity.User admin = com.bazzar.entity.User.builder()
+                    .name("Store Admin")
+                    .email("admin@bazzar.com")
+                    .password(passwordEncoder.encode("admin123"))
+                    .role(com.bazzar.entity.Role.ROLE_ADMIN)
+                    .build();
+            admin = userRepository.save(admin);
+            cartRepository.save(com.bazzar.entity.Cart.builder().user(admin).build());
+            log.info("Admin user seeded: admin@bazzar.com / admin123");
+        }
+
+        // Only seed categories/products if database is empty
         if (categoryRepository.count() > 0) {
-            log.info("Database already seeded – skipping data initialization.");
+            log.info("Database categories already seeded – skipping product initialization.");
             return;
         }
 

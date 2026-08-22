@@ -96,11 +96,16 @@ public class SecurityConfig {
     @Bean
     public UserDetailsService userDetailsService() {
         return username -> userRepository.findByEmail(username)
-                .map(user -> org.springframework.security.core.userdetails.User.builder()
-                        .username(user.getEmail())
-                        .password(user.getPassword())
-                        .authorities(java.util.Collections.emptyList())
-                        .build())
+                .map(user -> {
+                    String roleName = user.getRole() != null ? user.getRole().name() : "ROLE_USER";
+                    return org.springframework.security.core.userdetails.User.builder()
+                            .username(user.getEmail())
+                            .password(user.getPassword())
+                            .authorities(java.util.Collections.singletonList(
+                                    new org.springframework.security.core.authority.SimpleGrantedAuthority(roleName)
+                            ))
+                            .build();
+                })
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
     }
 

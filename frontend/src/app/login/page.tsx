@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { Lock, Mail, ArrowRight } from 'lucide-react';
+import { Lock, Mail, ArrowRight, Sparkles, ShieldCheck } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -21,7 +21,7 @@ export default function LoginPage() {
   const validate = () => {
     const errs: { email?: string; password?: string } = {};
     if (!email.trim()) {
-      errs.email = 'Email is required';
+      errs.email = 'Email address is required';
     } else if (!/\S+@\S+\.\S+/.test(email)) {
       errs.email = 'Please enter a valid email address';
     }
@@ -40,92 +40,107 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       const response = await login({ email, password });
-      toast.success(response.message || 'Login successful!');
+      toast.success(response.message || 'Welcome back to Bazzar!');
       router.push('/');
     } catch (err: any) {
-      toast.error(err.message || 'Invalid credentials');
+      toast.error(err.message || 'Invalid email or password');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="mx-auto max-w-md px-4 py-16 sm:px-6">
-      <Card className="border-zinc-200 shadow-xs">
-        <CardHeader className="space-y-1 text-center">
-          <CardTitle className="text-2xl font-extrabold tracking-tight text-black">
-            Welcome Back
-          </CardTitle>
-          <CardDescription className="text-xs text-zinc-500">
-            Sign in to your Bazzar account to continue
-          </CardDescription>
-        </CardHeader>
-
-        <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="email">Email Address</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-3 h-4 w-4 text-zinc-400" />
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="name@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="pl-9 text-sm"
-                  disabled={isLoading}
-                />
-              </div>
-              {errors.email && (
-                <p className="text-[10px] text-red-600 font-medium">{errors.email}</p>
-              )}
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-md space-y-6">
+        {/* Brand Logo Header */}
+        <div className="text-center space-y-2">
+          <Link href="/" className="inline-flex items-center gap-2 group">
+            <div className="h-10 w-10 rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-indigo-500/20 group-hover:scale-105 transition-transform">
+              B
             </div>
+            <span className="text-3xl font-black tracking-tight text-slate-900">
+              BAZZAR
+            </span>
+          </Link>
+          <p className="text-xs text-slate-500 font-medium">Sign in to manage orders, wishlist, and instant checkout</p>
+        </div>
 
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
-                <span className="text-[10px] text-zinc-400 cursor-pointer hover:underline">
-                  Forgot?
-                </span>
+        <Card className="rounded-3xl border border-slate-200/80 bg-white p-2 shadow-xl shadow-slate-200/50">
+          <CardHeader className="space-y-1 text-center pb-4 border-b border-slate-100">
+            <CardTitle className="text-xl font-black text-slate-900">
+              Welcome Back
+            </CardTitle>
+            <CardDescription className="text-xs text-slate-500">
+              Enter your credentials to access your account
+            </CardDescription>
+          </CardHeader>
+
+          <form onSubmit={handleSubmit}>
+            <CardContent className="space-y-4 pt-6">
+              <div className="space-y-1.5">
+                <Label htmlFor="email" className="text-xs font-bold text-slate-700">Email Address</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="name@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="pl-10 h-11 text-xs rounded-xl border-slate-200 bg-slate-50/50 focus-visible:bg-white"
+                    disabled={isLoading}
+                  />
+                </div>
+                {errors.email && (
+                  <p className="text-[11px] text-rose-600 font-semibold">{errors.email}</p>
+                )}
               </div>
-              <div className="relative">
-                <Lock className="absolute left-3 top-3 h-4 w-4 text-zinc-400" />
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="pl-9 text-sm"
-                  disabled={isLoading}
-                />
+
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password" className="text-xs font-bold text-slate-700">Password</Label>
+                  <span className="text-[11px] text-indigo-600 font-semibold cursor-pointer hover:underline">
+                    Forgot Password?
+                  </span>
+                </div>
+                <div className="relative">
+                  <Lock className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="pl-10 h-11 text-xs rounded-xl border-slate-200 bg-slate-50/50 focus-visible:bg-white"
+                    disabled={isLoading}
+                  />
+                </div>
+                {errors.password && (
+                  <p className="text-[11px] text-rose-600 font-semibold">{errors.password}</p>
+                )}
               </div>
-              {errors.password && (
-                <p className="text-[10px] text-red-600 font-medium">{errors.password}</p>
-              )}
-            </div>
-          </CardContent>
+            </CardContent>
 
-          <CardFooter className="flex flex-col space-y-4 pt-2">
-            <Button
-              type="submit"
-              disabled={isLoading}
-              className="w-full h-11 text-xs uppercase tracking-wider font-bold"
-            >
-              {isLoading ? 'Signing In...' : 'Sign In'}
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
+            <CardFooter className="flex flex-col space-y-4 pt-2">
+              <Button
+                type="submit"
+                disabled={isLoading}
+                className="w-full h-12 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-extrabold text-xs shadow-lg shadow-indigo-500/25"
+              >
+                {isLoading ? 'Signing In...' : 'Sign In to Account'}
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
 
-            <div className="text-center text-xs text-zinc-500 pt-2 border-t border-zinc-100 w-full">
-              Don't have an account?{' '}
-              <Link href="/register" className="font-semibold text-black hover:underline">
-                Create account
-              </Link>
-            </div>
-          </CardFooter>
-        </form>
-      </Card>
+              <div className="text-center text-xs text-slate-500 pt-3 border-t border-slate-100 w-full">
+                Don't have a Bazzar account yet?{' '}
+                <Link href="/register" className="font-extrabold text-indigo-600 hover:underline">
+                  Create Account
+                </Link>
+              </div>
+            </CardFooter>
+          </form>
+        </Card>
+      </div>
     </div>
   );
 }

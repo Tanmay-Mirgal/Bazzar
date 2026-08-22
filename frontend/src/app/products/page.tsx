@@ -7,12 +7,10 @@ import { getCategories } from '@/lib/api/categories';
 import { Product } from '@/types/product';
 import { Category } from '@/types/category';
 import { ProductGrid } from '@/components/product/product-grid';
-import { SearchBar } from '@/components/product/search-bar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SlidersHorizontal, Package, Search, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 
 function ProductsContent() {
   const searchParams = useSearchParams();
@@ -90,7 +88,7 @@ function ProductsContent() {
   const hasActiveFilters = searchQuery.trim() !== '' || (selectedCategory !== 'all');
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50 pb-16">
       {/* Page Header Banner */}
       <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white py-10 px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
@@ -222,139 +220,6 @@ export default function ProductsPage() {
               <Skeleton key={i} className="h-72 w-full rounded-2xl" />
             ))}
           </div>
-        </div>
-      }
-    >
-      <ProductsContent />
-    </React.Suspense>
-  );
-}
-
-
-function ProductsContent() {
-  const searchParams = useSearchParams();
-  const router = useRouter();
-
-  const initialCategory = searchParams.get('category') || 'all';
-  const initialSearch = searchParams.get('search') || '';
-
-  const [products, setProducts] = React.useState<Product[]>([]);
-  const [categories, setCategories] = React.useState<Category[]>([]);
-  const [selectedCategory, setSelectedCategory] = React.useState<string>(initialCategory);
-  const [searchQuery, setSearchQuery] = React.useState<string>(initialSearch);
-  const [sortBy, setSortBy] = React.useState<string>('newest');
-  const [isLoading, setIsLoading] = React.useState<boolean>(true);
-
-  // Fetch categories once
-  React.useEffect(() => {
-    async function loadCategories() {
-      try {
-        const cats = await getCategories();
-        setCategories(cats);
-      } catch (err) {
-        console.error('Failed to load categories', err);
-      }
-    }
-    loadCategories();
-  }, []);
-
-  // Update internal state when URL params change
-  React.useEffect(() => {
-    setSelectedCategory(searchParams.get('category') || 'all');
-    setSearchQuery(searchParams.get('search') || '');
-  }, [searchParams]);
-
-  // Fetch products based on category, search, and sortBy
-  React.useEffect(() => {
-    async function fetchFilteredProducts() {
-      setIsLoading(true);
-      try {
-        const data = await getProducts({
-          category: selectedCategory,
-          search: searchQuery,
-          sortBy: sortBy as any,
-        });
-        setProducts(data);
-      } catch (err) {
-        console.error('Failed to fetch products', err);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    fetchFilteredProducts();
-  }, [selectedCategory, searchQuery, sortBy]);
-
-  // Helper to sync changes with URL
-  const updateUrlParams = (cat: string, search: string) => {
-    const params = new URLSearchParams();
-    if (cat && cat !== 'all') params.set('category', cat);
-    if (search && search.trim() !== '') params.set('search', search.trim());
-    router.push(`/products${params.toString() ? `?${params.toString()}` : ''}`);
-  };
-
-  const handleCategoryChange = (categoryName: string) => {
-    setSelectedCategory(categoryName);
-    updateUrlParams(categoryName, searchQuery);
-  };
-
-  const handleSearchChange = (query: string) => {
-    setSearchQuery(query);
-    updateUrlParams(selectedCategory, query);
-  };
-
-  return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-8">
-      {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-zinc-200 pb-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-black">All Products</h1>
-          <p className="text-xs text-zinc-500 mt-1">
-            Explore our complete catalog of minimalist goods ({products.length} item{products.length === 1 ? '' : 's'})
-          </p>
-        </div>
-
-        {/* Sort By Dropdown */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-zinc-500 whitespace-nowrap">Sort by:</span>
-          <Select value={sortBy} onValueChange={(val) => setSortBy(val)}>
-            <SelectTrigger className="w-40 h-9 text-xs">
-              <SelectValue placeholder="Sort order" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="newest">Featured / Newest</SelectItem>
-              <SelectItem value="price-asc">Price: Low to High</SelectItem>
-              <SelectItem value="price-desc">Price: High to Low</SelectItem>
-              <SelectItem value="name">Name: A to Z</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      {/* Filter & Search Bar */}
-      <div className="space-y-4">
-        <SearchBar value={searchQuery} onChange={handleSearchChange} />
-
-        <CategoryFilter
-          categories={categories}
-          selectedCategory={selectedCategory}
-          onSelectCategory={handleCategoryChange}
-        />
-      </div>
-
-      {/* Product Grid */}
-      <ProductGrid products={products} isLoading={isLoading} />
-    </div>
-  );
-}
-
-export default function ProductsPage() {
-  return (
-    <React.Suspense
-      fallback={
-        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-8">
-          <Skeleton className="h-10 w-48" />
-          <ProductGrid products={[]} isLoading={true} />
         </div>
       }
     >

@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { ShoppingBag, ArrowRight, Trash2 } from 'lucide-react';
+import { ShoppingBag, ArrowRight, Trash2, ArrowLeft, ShieldCheck } from 'lucide-react';
 import { useCartStore } from '@/store/cart-store';
 import { CartItemComponent } from '@/components/cart/cart-item';
 import { OrderSummary } from '@/components/cart/order-summary';
@@ -31,8 +31,11 @@ export default function CartPage() {
 
   if (!mounted) {
     return (
-      <div className="mx-auto max-w-7xl px-4 py-16 text-center">
-        <p className="text-xs text-zinc-400">Loading shopping cart...</p>
+      <div className="mx-auto max-w-7xl px-4 py-24 text-center">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 w-48 bg-slate-200 rounded-lg mx-auto" />
+          <div className="h-64 w-full max-w-2xl bg-slate-100 rounded-2xl mx-auto" />
+        </div>
       </div>
     );
   }
@@ -42,86 +45,98 @@ export default function CartPage() {
 
   if (cartItems.length === 0) {
     return (
-      <div className="mx-auto max-w-7xl px-4 py-16 text-center space-y-6">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-zinc-100 mx-auto">
-          <ShoppingBag className="h-8 w-8 text-zinc-400" />
+      <div className="mx-auto max-w-4xl px-4 py-20 text-center space-y-6">
+        <div className="h-24 w-24 rounded-3xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto border border-indigo-100 shadow-sm">
+          <ShoppingBag className="h-12 w-12" />
         </div>
-        <h2 className="text-2xl font-bold text-black tracking-tight">Your Cart is Empty</h2>
-        <p className="text-xs text-zinc-500 max-w-md mx-auto leading-relaxed">
-          Looks like you haven't added anything to your cart yet. Explore our minimalist catalog to find products you love.
-        </p>
-        <Link href="/products">
-          <Button size="lg" className="text-xs uppercase tracking-wider font-semibold px-8 h-11">
-            Continue Shopping
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
-        </Link>
+        <div className="space-y-2">
+          <h2 className="text-3xl font-black text-slate-900 tracking-tight">Your Cart is Currently Empty</h2>
+          <p className="text-sm text-slate-500 max-w-md mx-auto leading-relaxed">
+            Looks like you haven't added any products to your shopping bag yet. Explore our curated collections to get started!
+          </p>
+        </div>
+        <div>
+          <Link href="/products">
+            <Button size="lg" className="rounded-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-8 h-12 shadow-lg shadow-indigo-500/25">
+              Explore Catalog Now
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </Link>
+        </div>
       </div>
     );
   }
 
   const handleClearCart = () => {
     clearCart();
-    toast.success('Cart cleared');
+    toast.success('Shopping cart cleared');
     setIsClearDialogOpen(false);
   };
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-8">
-      <div className="flex items-center justify-between border-b border-zinc-200 pb-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-black">Shopping Cart</h1>
-          <p className="text-xs text-zinc-500 mt-1">
-            You have {totalItems} item{totalItems === 1 ? '' : 's'} in your cart
-          </p>
-        </div>
+    <div className="bg-slate-50 min-h-screen pb-16">
+      {/* Page Header */}
+      <div className="bg-white border-b border-slate-200/80 py-8 px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl flex items-center justify-between">
+          <div>
+            <span className="text-xs font-bold uppercase tracking-wider text-indigo-600">Checkout Bag</span>
+            <h1 className="text-3xl font-black text-slate-900 tracking-tight mt-0.5">Your Shopping Cart</h1>
+            <p className="text-xs text-slate-500 mt-1">
+              You have <strong className="text-slate-900 font-bold">{totalItems} item{totalItems === 1 ? '' : 's'}</strong> reserved in your bag
+            </p>
+          </div>
 
-        {/* Clear Cart Button */}
-        <AlertDialog open={isClearDialogOpen} onOpenChange={setIsClearDialogOpen}>
-          <AlertDialogTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50 border-zinc-200"
-            >
-              <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-              Clear Cart
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Clear shopping cart?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Are you sure you want to remove all items from your shopping cart? This action cannot be undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleClearCart}>
-                Clear All
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+          <AlertDialog open={isClearDialogOpen} onOpenChange={setIsClearDialogOpen}>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-200 rounded-full font-bold px-4 h-9"
+              >
+                <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                Empty Cart
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent className="rounded-2xl">
+              <AlertDialogHeader>
+                <AlertDialogTitle className="font-bold text-lg">Clear Shopping Bag?</AlertDialogTitle>
+                <AlertDialogDescription className="text-xs text-slate-500">
+                  Are you sure you want to remove all items from your cart?
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleClearCart} className="bg-rose-600 hover:bg-rose-700 text-white rounded-xl">
+                  Clear All
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 items-start">
-        {/* Cart Item List */}
-        <div className="lg:col-span-2 space-y-2">
-          {cartItems.map((item) => (
-            <CartItemComponent key={item.product.id} item={item} />
-          ))}
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          {/* Cart Item List */}
+          <div className="lg:col-span-8 space-y-4">
+            <div className="space-y-3">
+              {cartItems.map((item) => (
+                <CartItemComponent key={item.product.id} item={item} />
+              ))}
+            </div>
 
-          <div className="pt-6">
-            <Link href="/products" className="text-xs font-semibold text-black hover:underline inline-flex items-center">
-              ← Continue Shopping
-            </Link>
+            <div className="pt-4 flex items-center justify-between">
+              <Link href="/products" className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1.5 hover:underline">
+                <ArrowLeft className="h-4 w-4" />
+                Continue Shopping
+              </Link>
+            </div>
           </div>
-        </div>
 
-        {/* Summary Card */}
-        <div className="lg:col-span-1">
-          <OrderSummary subtotal={totalPrice} totalItems={totalItems} />
+          {/* Order Summary Sidebar */}
+          <div className="lg:col-span-4">
+            <OrderSummary subtotal={totalPrice} totalItems={totalItems} />
+          </div>
         </div>
       </div>
     </div>

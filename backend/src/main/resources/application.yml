@@ -1,0 +1,32 @@
+server:
+  port: ${SERVER_PORT:8080}
+
+spring:
+  application:
+    name: bazzar-backend
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://ep-still-resonance-axnsj357-pooler.c-4.us-east-2.aws.neon.tech/neondb?sslmode=require}
+    username: ${DATABASE_USERNAME:neondb_owner}
+    password: ${DATABASE_PASSWORD:npg_X3OWnVsrYD1J}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    time-zone: UTC
+
+jwt:
+  secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
+  expiration: ${JWT_EXPIRATION:86400000}
+
+logging:
+  level:
+    com.bazzar: INFO
+    org.springframework.security: WARN

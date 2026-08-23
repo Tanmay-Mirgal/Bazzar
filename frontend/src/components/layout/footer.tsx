@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { Send, ShieldCheck, Heart, CreditCard, Lock, Truck, RefreshCw, CheckCircle2, Sparkles } from 'lucide-react';
+import { ArrowRight, Lock, Truck, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
@@ -18,110 +18,92 @@ export function Footer() {
       return;
     }
     setSubscribed(true);
-    toast.success('Welcome to Bazzar VIP Club! Check your inbox for your 15% welcome code. 🎉');
+    toast.success('Thank you for subscribing to Bazzar newsletter.');
     setEmail('');
   };
 
   return (
-    <footer className="border-t border-slate-900 bg-slate-950 text-slate-400">
+    <footer className="bg-[#111111] text-white border-t border-[#111111]">
       {/* Newsletter Section */}
-      <div className="border-b border-slate-800/80 py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-        <div className="rounded-3xl bg-gradient-to-r from-indigo-950 via-slate-900 to-purple-950 p-8 sm:p-10 border border-slate-800 shadow-2xl relative overflow-hidden">
-          {/* Background Ambient Glow */}
-          <div className="absolute top-0 right-0 h-64 w-64 rounded-full bg-indigo-500/10 blur-3xl pointer-events-none" />
+      <div className="border-b border-[#262626] py-14 px-4 sm:px-6 lg:px-8 max-w-[1440px] mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          <div className="lg:col-span-6 space-y-2">
+            <h3 className="text-2xl font-bold tracking-tight text-white">
+              Stay in the loop.
+            </h3>
+            <p className="text-xs text-[#A3A3A3] max-w-md">
+              Receive updates on new collection releases, seasonal edits, and exclusive storefront offers.
+            </p>
+          </div>
 
-          <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-            <div className="lg:col-span-7 space-y-2 text-center lg:text-left">
-              <div className="inline-flex items-center gap-1.5 rounded-full bg-indigo-500/20 px-3 py-1 text-xs font-bold text-indigo-300 border border-indigo-500/30">
-                <Sparkles className="h-3.5 w-3.5 text-amber-400" />
-                <span>Exclusive VIP Privileges</span>
-              </div>
-              <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-                Unlock 15% OFF Your Next Order
-              </h3>
-              <p className="text-xs sm:text-sm text-slate-300 max-w-xl">
-                Subscribe to Bazzar VIP Insider for early access to flash deals, secret coupon codes, and new arrivals.
-              </p>
-            </div>
-
-            <div className="lg:col-span-5">
-              <form className="flex items-center gap-2 max-w-md mx-auto lg:ml-auto" onSubmit={handleSubscribe}>
-                <Input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your email address..."
-                  className="h-12 rounded-full bg-slate-900/90 border-slate-700 text-xs text-white placeholder:text-slate-500 focus-visible:ring-2 focus-visible:ring-indigo-500"
-                />
-                <Button type="submit" className="h-12 px-7 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-black text-xs shrink-0 shadow-lg shadow-indigo-500/25">
-                  {subscribed ? 'Subscribed!' : 'Join VIP'}
-                  <Send className="ml-1.5 h-3.5 w-3.5" />
-                </Button>
-              </form>
-            </div>
+          <div className="lg:col-span-6">
+            <form className="flex items-center gap-2 max-w-md ml-auto" onSubmit={handleSubscribe}>
+              <Input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter your email address..."
+                className="h-11 rounded-none bg-[#1C1C1C] border-[#333333] text-xs text-white placeholder:text-[#737373] focus-visible:ring-1 focus-visible:ring-white"
+              />
+              <Button type="submit" className="h-11 px-6 rounded-none bg-white text-[#111111] hover:bg-[#E5E5E5] font-semibold text-xs shrink-0 transition-colors">
+                {subscribed ? 'Subscribed' : 'Subscribe'}
+                <ArrowRight className="ml-2 h-3.5 w-3.5" />
+              </Button>
+            </form>
           </div>
         </div>
       </div>
 
       {/* Main Footer Links */}
-      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
+      <div className="mx-auto max-w-[1440px] px-4 py-14 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 gap-10 md:grid-cols-4">
           {/* Brand Info */}
           <div className="space-y-4 md:col-span-1">
-            <div className="flex items-center gap-2.5">
-              <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white font-black text-base shadow-md">
-                B
-              </div>
-              <span className="text-xl font-black tracking-tight text-white">
-                BAZZAR
-              </span>
-            </div>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Curated e-commerce storefront delivering premium electronics, ergonomic footwear, luxury apparel, and daily workspace accessories directly to your doorstep.
+            <Link href="/" className="text-xl font-black tracking-tight text-white uppercase">
+              BAZZAR
+            </Link>
+            <p className="text-xs text-[#A3A3A3] leading-relaxed">
+              Curated e-commerce storefront for electronics, minimalist footwear, luxury apparel, and everyday lifestyle essentials.
             </p>
-
-            <div className="pt-2 flex flex-col gap-2 text-xs text-slate-400">
-              <span className="flex items-center gap-2 text-emerald-400 font-semibold">
-                <Lock className="h-3.5 w-3.5" /> 256-Bit SSL Encrypted Checkout
+            <div className="pt-2 flex flex-col gap-2 text-xs text-[#A3A3A3]">
+              <span className="flex items-center gap-2">
+                <Lock className="h-3.5 w-3.5 text-white" /> 256-Bit SSL Encrypted Checkout
               </span>
-              <span className="flex items-center gap-2 text-indigo-400 font-semibold">
-                <Truck className="h-3.5 w-3.5" /> Express Nationwide Delivery
-              </span>
-              <span className="flex items-center gap-2 text-amber-400 font-semibold">
-                <RefreshCw className="h-3.5 w-3.5" /> Hassle-Free 30-Day Exchange
+              <span className="flex items-center gap-2">
+                <Truck className="h-3.5 w-3.5 text-white" /> Express Doorstep Shipping
               </span>
             </div>
           </div>
 
-          {/* Catalog Categories */}
+          {/* Catalog Links */}
           <div className="space-y-3">
-            <h4 className="text-xs font-black uppercase tracking-wider text-white">
-              Explore Collections
+            <h4 className="text-xs font-bold uppercase tracking-wider text-white">
+              Shop Collections
             </h4>
-            <ul className="space-y-2.5 text-xs font-medium">
+            <ul className="space-y-2 text-xs text-[#A3A3A3]">
               <li>
-                <Link href="/products" className="hover:text-indigo-400 transition-colors">
+                <Link href="/products" className="hover:text-white transition-colors">
                   All Catalog
                 </Link>
               </li>
               <li>
-                <Link href="/products?category=Electronics" className="hover:text-indigo-400 transition-colors">
-                  Electronics & Audio
+                <Link href="/products?category=Electronics" className="hover:text-white transition-colors">
+                  Electronics
                 </Link>
               </li>
               <li>
-                <Link href="/products?category=Footwear" className="hover:text-indigo-400 transition-colors">
-                  Minimalist Footwear
+                <Link href="/products?category=Footwear" className="hover:text-white transition-colors">
+                  Footwear
                 </Link>
               </li>
               <li>
-                <Link href="/products?category=Apparel" className="hover:text-indigo-400 transition-colors">
-                  Heavyweight Apparel
+                <Link href="/products?category=Apparel" className="hover:text-white transition-colors">
+                  Apparel
                 </Link>
               </li>
               <li>
-                <Link href="/products?category=Accessories" className="hover:text-indigo-400 transition-colors">
-                  Everyday Accessories
+                <Link href="/products?category=Accessories" className="hover:text-white transition-colors">
+                  Accessories
                 </Link>
               </li>
             </ul>
@@ -129,57 +111,57 @@ export function Footer() {
 
           {/* Customer Care */}
           <div className="space-y-3">
-            <h4 className="text-xs font-black uppercase tracking-wider text-white">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-white">
               Customer Support
             </h4>
-            <ul className="space-y-2.5 text-xs font-medium">
+            <ul className="space-y-2 text-xs text-[#A3A3A3]">
               <li>
-                <Link href="/cart" className="hover:text-indigo-400 transition-colors">
+                <Link href="/cart" className="hover:text-white transition-colors">
                   Shopping Bag
                 </Link>
               </li>
               <li>
-                <Link href="/wishlist" className="hover:text-indigo-400 transition-colors">
+                <Link href="/wishlist" className="hover:text-white transition-colors">
                   Saved Wishlist
                 </Link>
               </li>
               <li>
-                <Link href="/checkout" className="hover:text-indigo-400 transition-colors">
+                <Link href="/checkout" className="hover:text-white transition-colors">
                   Order Tracking
                 </Link>
               </li>
               <li>
-                <Link href="/login" className="hover:text-indigo-400 transition-colors">
-                  Customer Sign In
+                <Link href="/login" className="hover:text-white transition-colors">
+                  Sign In / Register
                 </Link>
               </li>
             </ul>
           </div>
 
-          {/* Security & Payment Methods */}
-          <div className="space-y-4">
-            <h4 className="text-xs font-black uppercase tracking-wider text-white">
-              Accepted Payment Methods
+          {/* Payments & Legal */}
+          <div className="space-y-3">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-white">
+              Payment Gateways
             </h4>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              We accept all major secure payment gateways including UPI, Cards, NetBanking, and Cash on Delivery.
+            <p className="text-xs text-[#A3A3A3] leading-relaxed">
+              We accept all major secure payment options including UPI, Cards, NetBanking, and Cash on Delivery.
             </p>
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="bg-slate-900 border border-slate-800 text-slate-300 px-3 py-1 rounded.lg text-[11px] font-bold">UPI / GPay</span>
-              <span className="bg-slate-900 border border-slate-800 text-slate-300 px-3 py-1 rounded-lg text-[11px] font-bold">Visa</span>
-              <span className="bg-slate-900 border border-slate-800 text-slate-300 px-3 py-1 rounded-lg text-[11px] font-bold">Mastercard</span>
-              <span className="bg-slate-900 border border-slate-800 text-slate-300 px-3 py-1 rounded-lg text-[11px] font-bold">RuPay</span>
+            <div className="flex items-center gap-2 flex-wrap pt-1 text-[11px] font-mono text-[#A3A3A3]">
+              <span className="border border-[#333333] px-2 py-0.5 rounded-none">UPI</span>
+              <span className="border border-[#333333] px-2 py-0.5 rounded-none">VISA</span>
+              <span className="border border-[#333333] px-2 py-0.5 rounded-none">MASTERCARD</span>
+              <span className="border border-[#333333] px-2 py-0.5 rounded-none">RUPAY</span>
             </div>
           </div>
         </div>
 
-        {/* Bottom Bar */}
-        <div className="mt-12 border-t border-slate-900 pt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-4">
-          <p>© {new Date().getFullYear()} Bazzar Commerce Inc. Designed for exceptional shopping.</p>
+        {/* Bottom copyright */}
+        <div className="mt-12 border-t border-[#262626] pt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-[#737373] gap-4">
+          <p>© {new Date().getFullYear()} Bazzar Commerce Inc. All rights reserved.</p>
           <div className="flex items-center gap-6">
-            <span className="hover:text-slate-400 transition-colors cursor-pointer">Privacy Policy</span>
-            <span className="hover:text-slate-400 transition-colors cursor-pointer">Terms of Service</span>
-            <span className="hover:text-slate-400 transition-colors cursor-pointer">Security & Compliance</span>
+            <span className="hover:text-white cursor-pointer transition-colors">Privacy Policy</span>
+            <span className="hover:text-white cursor-pointer transition-colors">Terms of Service</span>
+            <span className="hover:text-white cursor-pointer transition-colors">Security</span>
           </div>
         </div>
       </div>

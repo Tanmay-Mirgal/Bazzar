@@ -8,8 +8,8 @@ import { Toaster } from '@/components/ui/sonner';
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
 export const metadata: Metadata = {
-  title: 'Bazzar — Modern Minimal E-Commerce',
-  description: 'Curated e-commerce application built with Next.js, Tailwind CSS, and shadcn/ui.',
+  title: 'Bazzar — Curated Modern E-Commerce',
+  description: 'Curated e-commerce storefront for electronics, footwear, apparel, and daily accessories.',
 };
 
 export default function RootLayout({
@@ -19,11 +19,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${inter.variable} h-full antialiased`}>
-      <body className="flex min-h-full flex-col bg-white text-zinc-950 font-sans">
+      <body className="flex min-h-full flex-col bg-white text-[#111111] font-sans">
         <Navbar />
         <main className="flex-1">{children}</main>
         <Footer />
-        <Toaster />
+        <Toaster position="bottom-right" />
       </body>
     </html>
   );

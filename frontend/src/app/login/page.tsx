@@ -9,14 +9,6 @@ import { useWishlistStore } from '@/store/wishlist-store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import { toast } from 'sonner';
 import { Lock, Mail, ArrowRight, ShieldCheck } from 'lucide-react';
 
@@ -49,11 +41,9 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       const response = await login({ email, password });
-      // Sync stores with backend after login
       setCartAuth(true);
       setWishlistAuth(true);
       toast.success('Welcome back to Bazzar!');
-      // Redirect admin to dashboard, regular users to home
       if (response.user.role === 'ROLE_ADMIN') {
         router.push('/admin');
       } else {
@@ -67,50 +57,64 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="w-full max-w-md space-y-6">
-        {/* Brand Logo Header */}
-        <div className="text-center space-y-2">
-          <Link href="/" className="inline-flex items-center gap-2 group">
-            <div className="h-10 w-10 rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-indigo-500/20 group-hover:scale-105 transition-transform">
-              B
-            </div>
-            <span className="text-3xl font-black tracking-tight text-slate-900">BAZZAR</span>
+    <div className="min-h-screen bg-white text-[#111111] grid grid-cols-1 lg:grid-cols-12 items-stretch">
+      {/* Left Editorial Image Section */}
+      <div className="hidden lg:flex lg:col-span-6 bg-[#F7F7F5] border-r border-[#E8E8E8] relative flex-col justify-between p-14">
+        <div>
+          <Link href="/" className="text-2xl font-black tracking-tight text-[#111111] uppercase">
+            BAZZAR
           </Link>
-          <p className="text-xs text-slate-500 font-medium">
-            Sign in to manage orders, wishlist, and instant checkout
+        </div>
+
+        <div className="space-y-4 max-w-md">
+          <span className="text-xs font-bold uppercase tracking-widest text-[#3F46D8]">Member Access</span>
+          <h2 className="text-4xl font-extrabold tracking-tight text-[#111111] leading-tight">
+            Curated Commerce Designed for Longevity.
+          </h2>
+          <p className="text-xs text-[#6B6B6B] leading-relaxed">
+            Access your saved favorites, track active shipments, and manage your account preferences in one central dashboard.
           </p>
         </div>
 
-        <Card className="rounded-3xl border border-slate-200/80 bg-white p-2 shadow-xl shadow-slate-200/50">
-          <CardHeader className="space-y-1 text-center pb-4 border-b border-slate-100">
-            <CardTitle className="text-xl font-black text-slate-900">Welcome Back</CardTitle>
-            <CardDescription className="text-xs text-slate-500">
-              Enter your credentials to access your account
-            </CardDescription>
-          </CardHeader>
+        <div className="text-xs text-[#6B6B6B]">
+          © {new Date().getFullYear()} Bazzar Storefront Inc.
+        </div>
+      </div>
 
-          <form onSubmit={handleSubmit}>
-            <CardContent className="space-y-4 pt-6">
-              {/* Admin hint */}
-              <div className="flex items-center gap-2 bg-indigo-50 border border-indigo-100 rounded-xl px-3 py-2.5 text-xs text-indigo-700">
-                <ShieldCheck className="h-4 w-4 shrink-0" />
-                <span>Admin: <strong>admin@bazzar.com</strong> / <strong>admin123</strong></span>
-              </div>
+      {/* Right Form Section */}
+      <div className="lg:col-span-6 flex items-center justify-center p-8 sm:p-14">
+        <div className="w-full max-w-md space-y-8">
+          <div className="space-y-2">
+            <Link href="/" className="lg:hidden text-2xl font-black tracking-tight text-[#111111] uppercase block mb-4">
+              BAZZAR
+            </Link>
+            <h1 className="text-3xl font-extrabold text-[#111111] tracking-tight">Sign In</h1>
+            <p className="text-xs text-[#6B6B6B]">
+              Enter your credentials to access your account.
+            </p>
+          </div>
 
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Dev Admin Hint */}
+            <div className="flex items-center gap-2 bg-[#F7F7F5] border border-[#E8E8E8] p-3 text-xs text-[#111111]">
+              <ShieldCheck className="h-4 w-4 text-[#3F46D8] shrink-0" />
+              <span>Admin: <strong>admin@bazzar.com</strong> / <strong>admin123</strong></span>
+            </div>
+
+            <div className="space-y-4">
               <div className="space-y-1.5">
-                <Label htmlFor="email" className="text-xs font-bold text-slate-700">
+                <Label htmlFor="email" className="text-xs font-bold text-[#111111]">
                   Email Address
                 </Label>
                 <div className="relative">
-                  <Mail className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
+                  <Mail className="absolute left-3.5 top-3 h-4 w-4 text-[#6B6B6B]" />
                   <Input
                     id="email"
                     type="email"
                     placeholder="name@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10 h-11 text-xs rounded-xl border-slate-200 bg-slate-50/50 focus-visible:bg-white"
+                    className="pl-10 h-11 text-xs rounded-none border-[#E8E8E8] bg-[#F7F7F5] focus-visible:ring-1 focus-visible:ring-[#111111]"
                     disabled={isLoading}
                   />
                 </div>
@@ -120,20 +124,18 @@ export default function LoginPage() {
               </div>
 
               <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="password" className="text-xs font-bold text-slate-700">
-                    Password
-                  </Label>
-                </div>
+                <Label htmlFor="password" className="text-xs font-bold text-[#111111]">
+                  Password
+                </Label>
                 <div className="relative">
-                  <Lock className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
+                  <Lock className="absolute left-3.5 top-3 h-4 w-4 text-[#6B6B6B]" />
                   <Input
                     id="password"
                     type="password"
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10 h-11 text-xs rounded-xl border-slate-200 bg-slate-50/50 focus-visible:bg-white"
+                    className="pl-10 h-11 text-xs rounded-none border-[#E8E8E8] bg-[#F7F7F5] focus-visible:ring-1 focus-visible:ring-[#111111]"
                     disabled={isLoading}
                   />
                 </div>
@@ -141,27 +143,25 @@ export default function LoginPage() {
                   <p className="text-[11px] text-rose-600 font-semibold">{errors.password}</p>
                 )}
               </div>
-            </CardContent>
+            </div>
 
-            <CardFooter className="flex flex-col space-y-4 pt-2">
-              <Button
-                type="submit"
-                disabled={isLoading}
-                className="w-full h-12 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-extrabold text-xs shadow-lg shadow-indigo-500/25"
-              >
-                {isLoading ? 'Signing In...' : 'Sign In to Account'}
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
+            <Button
+              type="submit"
+              disabled={isLoading}
+              className="w-full h-12 rounded-none bg-[#111111] hover:bg-[#3F46D8] text-white font-bold text-xs uppercase tracking-wider transition-colors"
+            >
+              {isLoading ? 'Signing In...' : 'Sign In to Account'}
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
 
-              <div className="text-center text-xs text-slate-500 pt-3 border-t border-slate-100 w-full">
-                {"Don't have a Bazzar account yet? "}
-                <Link href="/register" className="font-extrabold text-indigo-600 hover:underline">
-                  Create Account
-                </Link>
-              </div>
-            </CardFooter>
+            <div className="text-center text-xs text-[#6B6B6B] pt-4 border-t border-[#E8E8E8]">
+              {"Don't have a Bazzar account yet? "}
+              <Link href="/register" className="font-bold text-[#111111] hover:underline">
+                Create Account
+              </Link>
+            </div>
           </form>
-        </Card>
+        </div>
       </div>
     </div>
   );

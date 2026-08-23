@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { ShoppingBag, ArrowRight, Trash2, ArrowLeft, ShieldCheck } from 'lucide-react';
+import { ShoppingBag, ArrowRight, Trash2, ArrowLeft } from 'lucide-react';
 import { useCartStore } from '@/store/cart-store';
 import { CartItemComponent } from '@/components/cart/cart-item';
 import { OrderSummary } from '@/components/cart/order-summary';
@@ -31,10 +31,10 @@ export default function CartPage() {
 
   if (!mounted) {
     return (
-      <div className="mx-auto max-w-7xl px-4 py-24 text-center">
+      <div className="mx-auto max-w-[1440px] px-4 py-24 text-center min-h-screen">
         <div className="animate-pulse space-y-4">
-          <div className="h-8 w-48 bg-slate-200 rounded-lg mx-auto" />
-          <div className="h-64 w-full max-w-2xl bg-slate-100 rounded-2xl mx-auto" />
+          <div className="h-8 w-48 bg-[#F7F7F5] mx-auto" />
+          <div className="h-64 w-full max-w-2xl bg-[#F7F7F5] mx-auto" />
         </div>
       </div>
     );
@@ -45,20 +45,20 @@ export default function CartPage() {
 
   if (cartItems.length === 0) {
     return (
-      <div className="mx-auto max-w-4xl px-4 py-20 text-center space-y-6">
-        <div className="h-24 w-24 rounded-3xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto border border-indigo-100 shadow-sm">
-          <ShoppingBag className="h-12 w-12" />
+      <div className="mx-auto max-w-xl px-4 py-24 text-center space-y-6">
+        <div className="h-16 w-16 rounded-full bg-[#F7F7F5] border border-[#E8E8E8] text-[#111111] flex items-center justify-center mx-auto">
+          <ShoppingBag className="h-8 w-8 text-[#6B6B6B]" />
         </div>
         <div className="space-y-2">
-          <h2 className="text-3xl font-black text-slate-900 tracking-tight">Your Cart is Currently Empty</h2>
-          <p className="text-sm text-slate-500 max-w-md mx-auto leading-relaxed">
-            Looks like you haven't added any products to your shopping bag yet. Explore our curated collections to get started!
+          <h2 className="text-2xl font-extrabold text-[#111111]">Your Shopping Bag is Empty</h2>
+          <p className="text-xs text-[#6B6B6B] max-w-sm mx-auto">
+            You currently have no items in your shopping bag. Discover our curated collections to start shopping.
           </p>
         </div>
         <div>
           <Link href="/products">
-            <Button size="lg" className="rounded-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-8 h-12 shadow-lg shadow-indigo-500/25">
-              Explore Catalog Now
+            <Button size="lg" className="rounded-none bg-[#111111] hover:bg-[#3F46D8] text-white font-semibold text-xs px-8 h-11">
+              Explore Store Catalog
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </Link>
@@ -74,15 +74,15 @@ export default function CartPage() {
   };
 
   return (
-    <div className="bg-slate-50 min-h-screen pb-16">
+    <div className="bg-white text-[#111111] min-h-screen pb-20">
       {/* Page Header */}
-      <div className="bg-white border-b border-slate-200/80 py-8 px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-7xl flex items-center justify-between">
+      <div className="bg-[#F7F7F5] border-b border-[#E8E8E8] py-8 px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-[1440px] flex items-center justify-between">
           <div>
-            <span className="text-xs font-bold uppercase tracking-wider text-indigo-600">Checkout Bag</span>
-            <h1 className="text-3xl font-black text-slate-900 tracking-tight mt-0.5">Your Shopping Cart</h1>
-            <p className="text-xs text-slate-500 mt-1">
-              You have <strong className="text-slate-900 font-bold">{totalItems} item{totalItems === 1 ? '' : 's'}</strong> reserved in your bag
+            <span className="text-xs font-bold uppercase tracking-widest text-[#3F46D8]">Shopping Bag</span>
+            <h1 className="text-3xl font-extrabold text-[#111111] tracking-tight mt-0.5">Your Cart</h1>
+            <p className="text-xs text-[#6B6B6B] mt-1">
+              You have <strong className="text-[#111111] font-bold">{totalItems} item{totalItems === 1 ? '' : 's'}</strong> in your shopping bag
             </p>
           </div>
 
@@ -91,22 +91,22 @@ export default function CartPage() {
               <Button
                 variant="outline"
                 size="sm"
-                className="text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-200 rounded-full font-bold px-4 h-9"
+                className="text-xs text-rose-600 hover:text-white hover:bg-rose-600 border-rose-200 rounded-none font-semibold px-4 h-9"
               >
                 <Trash2 className="h-3.5 w-3.5 mr-1.5" />
                 Empty Cart
               </Button>
             </AlertDialogTrigger>
-            <AlertDialogContent className="rounded-2xl">
+            <AlertDialogContent className="rounded-none bg-white border border-[#E8E8E8]">
               <AlertDialogHeader>
-                <AlertDialogTitle className="font-bold text-lg">Clear Shopping Bag?</AlertDialogTitle>
-                <AlertDialogDescription className="text-xs text-slate-500">
-                  Are you sure you want to remove all items from your cart?
+                <AlertDialogTitle className="font-bold text-base text-[#111111]">Empty Shopping Bag?</AlertDialogTitle>
+                <AlertDialogDescription className="text-xs text-[#6B6B6B]">
+                  Are you sure you want to remove all products from your cart?
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleClearCart} className="bg-rose-600 hover:bg-rose-700 text-white rounded-xl">
+                <AlertDialogCancel className="rounded-none border-[#E8E8E8] text-xs font-semibold">Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleClearCart} className="bg-rose-600 hover:bg-rose-700 text-white rounded-none text-xs font-semibold">
                   Clear All
                 </AlertDialogAction>
               </AlertDialogFooter>
@@ -115,8 +115,8 @@ export default function CartPage() {
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      <div className="mx-auto max-w-[1440px] px-4 py-10 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
           {/* Cart Item List */}
           <div className="lg:col-span-8 space-y-4">
             <div className="space-y-3">
@@ -126,14 +126,14 @@ export default function CartPage() {
             </div>
 
             <div className="pt-4 flex items-center justify-between">
-              <Link href="/products" className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1.5 hover:underline">
+              <Link href="/products" className="text-xs font-semibold text-[#111111] hover:text-[#3F46D8] flex items-center gap-1.5 underline">
                 <ArrowLeft className="h-4 w-4" />
                 Continue Shopping
               </Link>
             </div>
           </div>
 
-          {/* Order Summary Sidebar */}
+          {/* Order Summary */}
           <div className="lg:col-span-4">
             <OrderSummary subtotal={totalPrice} totalItems={totalItems} />
           </div>

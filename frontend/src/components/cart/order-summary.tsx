@@ -2,11 +2,10 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { ArrowRight, ShieldCheck, Tag, Sparkles, Truck } from 'lucide-react';
+import { ArrowRight, ShieldCheck, Tag, Truck } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 
 interface OrderSummaryProps {
@@ -29,11 +28,11 @@ export function OrderSummary({ subtotal, totalItems }: OrderSummaryProps) {
     if (code === 'BAZZAR10') {
       setAppliedDiscount(0.10);
       setAppliedCode('BAZZAR10');
-      toast.success('Promo code BAZZAR10 applied! 10% OFF');
+      toast.success('Promo code BAZZAR10 applied! (10% OFF)');
     } else if (code === 'BAZZAR20') {
       setAppliedDiscount(0.20);
       setAppliedCode('BAZZAR20');
-      toast.success('Promo code BAZZAR20 applied! 20% OFF');
+      toast.success('Promo code BAZZAR20 applied! (20% OFF)');
     } else {
       toast.error('Invalid promo code. Try BAZZAR10 or BAZZAR20');
     }
@@ -43,96 +42,92 @@ export function OrderSummary({ subtotal, totalItems }: OrderSummaryProps) {
   const grandTotal = Math.max(0, subtotal - discountAmount + shippingFee);
 
   return (
-    <Card className="rounded-2xl border border-slate-200/80 bg-white p-2 shadow-sm sticky top-24">
-      <CardHeader className="pb-3 border-b border-slate-100">
-        <CardTitle className="text-lg font-black tracking-tight text-slate-900 flex items-center justify-between">
-          <span>Order Summary</span>
-          <span className="text-xs text-slate-500 font-semibold">{totalItems} Item{totalItems === 1 ? '' : 's'}</span>
-        </CardTitle>
-      </CardHeader>
+    <div className="bg-white border border-[#E8E8E8] p-6 space-y-6 text-xs text-[#111111] sticky top-24">
+      <div className="border-b border-[#E8E8E8] pb-4 flex items-center justify-between">
+        <h3 className="text-base font-extrabold text-[#111111] tracking-tight uppercase">Order Summary</h3>
+        <span className="text-xs text-[#6B6B6B] font-semibold">{totalItems} Item{totalItems === 1 ? '' : 's'}</span>
+      </div>
 
-      <CardContent className="space-y-4 pt-4 text-xs">
-        {/* Free Shipping Progress Indicator */}
-        <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-3 space-y-1.5">
-          <div className="flex items-center justify-between text-[11px] font-bold text-indigo-900">
-            <span className="flex items-center gap-1">
-              <Truck className="h-3.5 w-3.5 text-indigo-600" />
-              {subtotal >= freeShippingThreshold ? '🎉 You unlocked Free Shipping!' : `Add ${formatCurrency(freeShippingThreshold - subtotal)} for Free Shipping`}
-            </span>
-          </div>
-          <div className="h-2 w-full rounded-full bg-indigo-200/60 overflow-hidden">
-            <div
-              className="h-full bg-gradient-to-r from-indigo-500 to-purple-600 transition-all duration-500"
-              style={{ width: `${progressPercent}%` }}
-            />
-          </div>
+      {/* Free Shipping Indicator */}
+      <div className="bg-[#F7F7F5] border border-[#E8E8E8] p-3 space-y-2">
+        <div className="flex items-center justify-between text-[11px] font-bold text-[#111111]">
+          <span className="flex items-center gap-1.5">
+            <Truck className="h-3.5 w-3.5 text-[#3F46D8]" />
+            {subtotal >= freeShippingThreshold ? 'Free shipping unlocked' : `Add ${formatCurrency(freeShippingThreshold - subtotal)} for Free Shipping`}
+          </span>
+        </div>
+        <div className="h-1.5 w-full bg-[#E8E8E8] overflow-hidden">
+          <div
+            className="h-full bg-[#3F46D8] transition-all duration-300"
+            style={{ width: `${progressPercent}%` }}
+          />
+        </div>
+      </div>
+
+      {/* Promo Code Form */}
+      <form onSubmit={handleApplyPromo} className="flex gap-2">
+        <div className="relative flex-1">
+          <Tag className="absolute left-3 top-2.5 h-3.5 w-3.5 text-[#6B6B6B]" />
+          <Input
+            type="text"
+            placeholder="Promo code (BAZZAR10)"
+            value={promoCode}
+            onChange={(e) => setPromoCode(e.target.value)}
+            className="pl-8 text-xs h-9 rounded-none border-[#E8E8E8] bg-[#F7F7F5] uppercase font-mono"
+          />
+        </div>
+        <Button type="submit" variant="outline" className="h-9 px-4 text-xs font-bold rounded-none border-[#111111] hover:bg-[#111111] hover:text-white transition-colors">
+          Apply
+        </Button>
+      </form>
+
+      {appliedCode && (
+        <div className="flex items-center justify-between text-xs bg-emerald-50 text-emerald-800 p-2 font-semibold border border-emerald-200">
+          <span>Code {appliedCode} (-{(appliedDiscount * 100)}%)</span>
+          <button onClick={() => { setAppliedDiscount(0); setAppliedCode(''); }} className="text-emerald-900 text-[10px] underline">Remove</button>
+        </div>
+      )}
+
+      {/* Breakdown */}
+      <div className="space-y-2.5 pt-2 text-[#6B6B6B] border-t border-[#E8E8E8]">
+        <div className="flex justify-between text-[#111111]">
+          <span>Subtotal</span>
+          <span className="font-bold">{formatCurrency(subtotal)}</span>
         </div>
 
-        {/* Promo Code Input */}
-        <form onSubmit={handleApplyPromo} className="flex gap-2">
-          <div className="relative flex-1">
-            <Tag className="absolute left-3 top-3 h-3.5 w-3.5 text-slate-400" />
-            <Input
-              type="text"
-              placeholder="Promo Code (BAZZAR10)"
-              value={promoCode}
-              onChange={(e) => setPromoCode(e.target.value)}
-              className="pl-8 text-xs h-9 rounded-xl border-slate-200 bg-slate-50 uppercase font-mono"
-            />
-          </div>
-          <Button type="submit" variant="outline" className="h-9 px-3 text-xs font-bold rounded-xl border-slate-300 hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition-colors">
-            Apply
-          </Button>
-        </form>
-
-        {appliedCode && (
-          <div className="flex items-center justify-between text-xs bg-emerald-50 text-emerald-800 p-2 rounded-lg font-semibold border border-emerald-200">
-            <span>Code {appliedCode} (-{(appliedDiscount * 100)}%)</span>
-            <button onClick={() => { setAppliedDiscount(0); setAppliedCode(''); }} className="text-emerald-900 text-[10px] underline">Remove</button>
+        {appliedDiscount > 0 && (
+          <div className="flex justify-between text-emerald-600 font-semibold">
+            <span>Discount</span>
+            <span>-{formatCurrency(discountAmount)}</span>
           </div>
         )}
 
-        {/* Breakdown List */}
-        <div className="space-y-2.5 pt-2 text-slate-600">
-          <div className="flex justify-between">
-            <span>Subtotal</span>
-            <span className="font-bold text-slate-900">{formatCurrency(subtotal)}</span>
-          </div>
-
-          {appliedDiscount > 0 && (
-            <div className="flex justify-between text-emerald-600 font-semibold">
-              <span>Discount</span>
-              <span>-{formatCurrency(discountAmount)}</span>
-            </div>
-          )}
-
-          <div className="flex justify-between">
-            <span>Estimated Delivery Fee</span>
-            <span className="font-bold text-slate-900">
-              {shippingFee === 0 ? <span className="text-emerald-600 font-bold">FREE</span> : formatCurrency(shippingFee)}
-            </span>
-          </div>
-
-          <div className="border-t border-slate-100 pt-3 flex justify-between text-sm font-black text-slate-900">
-            <span>Estimated Total</span>
-            <span className="text-lg text-indigo-600">{formatCurrency(grandTotal)}</span>
-          </div>
+        <div className="flex justify-between text-[#111111]">
+          <span>Delivery Fee</span>
+          <span className="font-bold">
+            {shippingFee === 0 ? <span className="text-emerald-600">FREE</span> : formatCurrency(shippingFee)}
+          </span>
         </div>
-      </CardContent>
 
-      <CardFooter className="flex-col gap-3 pt-2">
-        <Link href="/checkout" className="w-full">
-          <Button size="lg" className="w-full h-12 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-extrabold text-xs shadow-lg shadow-indigo-500/25">
+        <div className="border-t border-[#E8E8E8] pt-3 flex justify-between text-sm font-extrabold text-[#111111]">
+          <span>Estimated Total</span>
+          <span className="text-lg text-[#111111]">{formatCurrency(grandTotal)}</span>
+        </div>
+      </div>
+
+      <div className="space-y-3 pt-2">
+        <Link href="/checkout" className="w-full block">
+          <Button size="lg" className="w-full h-12 rounded-none bg-[#111111] hover:bg-[#3F46D8] text-white font-bold text-xs tracking-wider uppercase transition-colors">
             Proceed to Checkout
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </Link>
 
-        <div className="flex items-center justify-center gap-1 text-[11px] text-slate-400 font-medium">
-          <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
-          <span>Guaranteed 256-Bit SSL Checkout</span>
+        <div className="flex items-center justify-center gap-1.5 text-[11px] text-[#6B6B6B]">
+          <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
+          <span>Guaranteed 256-Bit SSL Encrypted Checkout</span>
         </div>
-      </CardFooter>
-    </Card>
+      </div>
+    </div>
   );
 }

@@ -29,7 +29,7 @@ export function CartItemComponent({ item }: CartItemProps) {
   const handleDecrease = () => {
     if (quantity <= 1) {
       removeFromCart(product.id);
-      toast.success(`Removed ${product.name} from cart`);
+      toast.success(`Removed "${product.name}" from bag`);
       return;
     }
     decreaseQuantity(product.id);
@@ -37,91 +37,81 @@ export function CartItemComponent({ item }: CartItemProps) {
 
   const handleRemove = () => {
     removeFromCart(product.id);
-    toast.success(`Removed ${product.name} from cart`);
+    toast.success(`Removed "${product.name}" from bag`);
   };
 
   const itemTotal = product.price * quantity;
 
   return (
-    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 sm:p-5 rounded-2xl border border-slate-200/80 bg-white shadow-xs gap-4 transition-all hover:border-slate-300">
+    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-white border border-[#E8E8E8] text-[#111111] gap-4">
       <div className="flex items-center gap-4 w-full sm:w-auto">
         {/* Thumbnail */}
-        <Link href={`/products/${product.id}`} className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-slate-100 border border-slate-200">
+        <Link href={`/products/${product.id}`} className="relative h-20 w-20 shrink-0 overflow-hidden bg-[#F7F7F5] border border-[#E8E8E8]">
           <Image
             src={product.image}
             alt={product.name}
             fill
             sizes="80px"
-            className="object-cover object-center transition-transform hover:scale-105"
+            className="object-cover object-center"
           />
         </Link>
 
         {/* Product Details */}
         <div className="flex-1 space-y-1">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-600">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-[#3F46D8]">
             {product.category}
           </span>
           <Link
             href={`/products/${product.id}`}
-            className="font-bold text-sm text-slate-900 line-clamp-1 hover:text-indigo-600 transition-colors block"
+            className="font-bold text-sm text-[#111111] line-clamp-1 hover:text-[#3F46D8] transition-colors block"
           >
             {product.name}
           </Link>
-          <div className="flex items-center gap-2 text-xs text-slate-500">
+          <div className="flex items-center gap-2 text-xs text-[#6B6B6B]">
             <span>{formatCurrency(product.price)} each</span>
-            <span className="text-slate-300">•</span>
-            <span className="text-emerald-600 font-semibold text-[11px] flex items-center gap-1">
-              <Check className="h-3 w-3" /> In Stock
-            </span>
           </div>
         </div>
       </div>
 
-      {/* Controls & Total */}
-      <div className="flex items-center justify-between sm:justify-end gap-6 w-full sm:w-auto pt-3 sm:pt-0 border-t sm:border-0 border-slate-100">
-        {/* Quantity Controls */}
-        <div className="flex items-center rounded-xl border border-slate-200 bg-slate-50 p-1">
-          <Button
-            variant="ghost"
-            size="icon"
+      {/* Quantity & Total */}
+      <div className="flex items-center justify-between sm:justify-end gap-6 w-full sm:w-auto pt-3 sm:pt-0 border-t sm:border-0 border-[#E8E8E8]">
+        {/* Controls */}
+        <div className="flex items-center border border-[#E8E8E8] bg-[#F7F7F5]">
+          <button
             onClick={handleDecrease}
-            className="h-7 w-7 rounded-lg text-slate-600 hover:bg-white hover:text-slate-900"
+            className="h-8 w-8 flex items-center justify-center text-[#111111] hover:bg-[#E8E8E8]"
             aria-label="Decrease quantity"
           >
             <Minus className="h-3.5 w-3.5" />
-          </Button>
-          <span className="w-8 text-center text-xs font-bold text-slate-900">
+          </button>
+          <span className="w-8 text-center text-xs font-bold text-[#111111]">
             {quantity}
           </span>
-          <Button
-            variant="ghost"
-            size="icon"
+          <button
             onClick={handleIncrease}
             disabled={quantity >= product.stock}
-            className="h-7 w-7 rounded-lg text-slate-600 hover:bg-white hover:text-slate-900"
+            className="h-8 w-8 flex items-center justify-center text-[#111111] hover:bg-[#E8E8E8]"
             aria-label="Increase quantity"
           >
             <Plus className="h-3.5 w-3.5" />
-          </Button>
+          </button>
         </div>
 
         {/* Total Price */}
         <div className="text-right">
-          <span className="text-base font-black text-slate-900 block">
+          <span className="text-base font-bold text-[#111111] block">
             {formatCurrency(itemTotal)}
           </span>
         </div>
 
-        {/* Remove Button */}
-        <Button
-          variant="ghost"
-          size="icon"
+        {/* Delete button */}
+        <button
           onClick={handleRemove}
-          className="h-8 w-8 rounded-full text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+          className="p-1 text-[#6B6B6B] hover:text-rose-600 transition-colors"
           aria-label="Remove item"
         >
           <Trash2 className="h-4 w-4" />
-        </Button>
+        </button>
       </div>
     </div>
   );

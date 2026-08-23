@@ -59,8 +59,9 @@ export function Footer() {
         <div className="grid grid-cols-1 gap-10 md:grid-cols-4">
           {/* Brand Info */}
           <div className="space-y-4 md:col-span-1">
-            <Link href="/" className="text-xl font-black tracking-tight text-white uppercase">
-              BAZZAR
+            <Link href="/" className="flex items-center gap-2 text-xl font-black tracking-tight text-white uppercase">
+              <img src="/logo.png" alt="Bazzar Logo" className="h-7 w-7 object-contain bg-white rounded-sm p-0.5" />
+              <span>BAZZAR</span>
             </Link>
             <p className="text-xs text-[#A3A3A3] leading-relaxed">
               Curated e-commerce storefront for electronics, minimalist footwear, luxury apparel, and everyday lifestyle essentials.

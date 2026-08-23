@@ -77,8 +77,15 @@ export function Navbar() {
         <div className="flex h-16 items-center justify-between gap-6">
           {/* Logo & Navigation Links */}
           <div className="flex items-center gap-10">
-            <Link href="/" className="text-xl font-black tracking-tight text-[#111111] uppercase">
-              BAZZAR
+            <Link href="/" className="flex items-center gap-2.5 group">
+              <img
+                src="/logo.png"
+                alt="Bazzar Logo"
+                className="h-8 w-8 object-contain"
+              />
+              <span className="text-xl font-black tracking-tight text-[#111111] uppercase">
+                BAZZAR
+              </span>
             </Link>
 
             <nav className="hidden lg:flex items-center gap-6 text-xs font-semibold tracking-wide text-[#6B6B6B]">
@@ -169,7 +176,8 @@ export function Navbar() {
                 </SheetTrigger>
                 <SheetContent side="right" className="w-80 bg-white p-6 border-l border-[#E8E8E8]">
                   <SheetHeader className="text-left border-b border-[#E8E8E8] pb-4">
-                    <SheetTitle className="text-lg font-black tracking-tight text-[#111111] uppercase">
+                    <SheetTitle className="text-lg font-black tracking-tight text-[#111111] uppercase flex items-center gap-2">
+                      <img src="/logo.png" alt="Bazzar Logo" className="h-6 w-6 object-contain" />
                       BAZZAR
                     </SheetTitle>
                   </SheetHeader>

@@ -142,8 +142,8 @@ export default function AdminDashboardPage() {
         <div className="mx-auto max-w-[1440px] flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="inline-flex items-center gap-2 border border-[#333333] px-3 py-1 text-xs font-mono text-indigo-300 mb-2">
-              <ShieldCheck className="h-4 w-4 text-indigo-400" />
-              ADMIN CONTROL CENTER
+              <img src="/logo.png" alt="Bazzar Logo" className="h-4 w-4 object-contain bg-white rounded-xs p-0.5" />
+              <span>ADMIN CONTROL CENTER</span>
             </div>
             <h1 className="text-3xl font-extrabold text-white tracking-tight">Store Operations Portal</h1>
             <p className="text-[#A3A3A3] text-xs mt-1">Manage catalog inventory, review user transactions, and publish new products</p>

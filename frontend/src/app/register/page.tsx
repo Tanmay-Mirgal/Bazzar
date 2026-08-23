@@ -67,8 +67,9 @@ export default function RegisterPage() {
       {/* Left Editorial Section */}
       <div className="hidden lg:flex lg:col-span-6 bg-[#F7F7F5] border-r border-[#E8E8E8] relative flex-col justify-between p-14">
         <div>
-          <Link href="/" className="text-2xl font-black tracking-tight text-[#111111] uppercase">
-            BAZZAR
+          <Link href="/" className="flex items-center gap-2.5 text-2xl font-black tracking-tight text-[#111111] uppercase">
+            <img src="/logo.png" alt="Bazzar Logo" className="h-8 w-8 object-contain" />
+            <span>BAZZAR</span>
           </Link>
         </div>
 
@@ -91,8 +92,9 @@ export default function RegisterPage() {
       <div className="lg:col-span-6 flex items-center justify-center p-8 sm:p-14">
         <div className="w-full max-w-md space-y-8">
           <div className="space-y-2">
-            <Link href="/" className="lg:hidden text-2xl font-black tracking-tight text-[#111111] uppercase block mb-4">
-              BAZZAR
+            <Link href="/" className="lg:hidden flex items-center gap-2 text-2xl font-black tracking-tight text-[#111111] uppercase mb-4">
+              <img src="/logo.png" alt="Bazzar Logo" className="h-8 w-8 object-contain" />
+              <span>BAZZAR</span>
             </Link>
             <h1 className="text-3xl font-extrabold text-[#111111] tracking-tight">Create Account</h1>
             <p className="text-xs text-[#6B6B6B]">

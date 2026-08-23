@@ -14,6 +14,15 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { toast } from 'sonner';
 import { CheckCircle2, ArrowLeft, ShieldCheck, CreditCard, Lock, Truck, ShoppingBag, ArrowRight } from 'lucide-react';
 
+type CheckoutFormValues = {
+  fullName: string;
+  email: string;
+  phone: string;
+  address: string;
+  city: string;
+  postalCode: string;
+};
+
 export default function CheckoutPage() {
   const router = useRouter();
   const { cartItems, clearCart, getTotalItems, getTotalPrice } = useCartStore();
@@ -89,15 +98,15 @@ export default function CheckoutPage() {
     if (!formValues.city.trim()) newErrors.city = 'City is required';
     if (!formValues.postalCode.trim()) newErrors.postalCode = 'Postal code is required';
 
-    setErrors(newErrors);
+    setErrors(newErrors as Record<string, string>);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormValues((prev) => ({ ...prev, [name]: value }));
-    if (errors[name as keyof CheckoutFormValues]) {
-      setErrors((prev) => ({ ...prev, [name]: undefined }));
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: '' }));
     }
   };
 

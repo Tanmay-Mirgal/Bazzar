@@ -3,31 +3,31 @@ import { Category } from '@/types/category';
 
 export const MOCK_CATEGORIES: Category[] = [
   {
-    id: 'cat-1',
+    id: 1,
     name: 'Electronics',
     slug: 'electronics',
     description: 'High-performance audio, computing, and everyday gadgets.',
   },
   {
-    id: 'cat-2',
+    id: 2,
     name: 'Footwear',
     slug: 'footwear',
     description: 'Minimalist sneakers and ergonomic footwear built for comfort.',
   },
   {
-    id: 'cat-3',
+    id: 3,
     name: 'Apparel',
     slug: 'apparel',
     description: 'Essential monochrome wardrobe pieces crafted from premium fabrics.',
   },
   {
-    id: 'cat-4',
+    id: 4,
     name: 'Accessories',
     slug: 'accessories',
     description: 'Timeless watches, eyewear, and carrying solutions.',
   },
   {
-    id: 'cat-5',
+    id: 5,
     name: 'Home & Office',
     slug: 'home-office',
     description: 'Elevated workspace essentials and Scandinavian interior elements.',

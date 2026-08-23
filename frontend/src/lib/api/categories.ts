@@ -1,8 +1,10 @@
-import { Category } from '@/types/category';
-import { MOCK_CATEGORIES } from '@/data/mock-data';
-import { simulateNetworkDelay } from './client';
+import { apiFetch } from './client';
+
+export interface Category {
+  id: number;
+  name: string;
+}
 
 export async function getCategories(): Promise<Category[]> {
-  await simulateNetworkDelay(250);
-  return MOCK_CATEGORIES;
+  return apiFetch<Category[]>('/categories');
 }

@@ -4,12 +4,21 @@ import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { login } from '@/lib/api/auth';
+import { useCartStore } from '@/store/cart-store';
+import { useWishlistStore } from '@/store/wishlist-store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { toast } from 'sonner';
-import { Lock, Mail, ArrowRight, Sparkles, ShieldCheck } from 'lucide-react';
+import { Lock, Mail, ArrowRight, ShieldCheck } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -17,6 +26,8 @@ export default function LoginPage() {
   const [password, setPassword] = React.useState('');
   const [isLoading, setIsLoading] = React.useState(false);
   const [errors, setErrors] = React.useState<{ email?: string; password?: string }>({});
+  const setCartAuth = useCartStore((s) => s.setAuthenticated);
+  const setWishlistAuth = useWishlistStore((s) => s.setAuthenticated);
 
   const validate = () => {
     const errs: { email?: string; password?: string } = {};
@@ -34,14 +45,20 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!validate()) return;
-
     setIsLoading(true);
     try {
       const response = await login({ email, password });
-      toast.success(response.message || 'Welcome back to Bazzar!');
-      router.push('/');
+      // Sync stores with backend after login
+      setCartAuth(true);
+      setWishlistAuth(true);
+      toast.success('Welcome back to Bazzar!');
+      // Redirect admin to dashboard, regular users to home
+      if (response.user.role === 'ROLE_ADMIN') {
+        router.push('/admin');
+      } else {
+        router.push('/');
+      }
     } catch (err: any) {
       toast.error(err.message || 'Invalid email or password');
     } finally {
@@ -58,18 +75,16 @@ export default function LoginPage() {
             <div className="h-10 w-10 rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-indigo-500/20 group-hover:scale-105 transition-transform">
               B
             </div>
-            <span className="text-3xl font-black tracking-tight text-slate-900">
-              BAZZAR
-            </span>
+            <span className="text-3xl font-black tracking-tight text-slate-900">BAZZAR</span>
           </Link>
-          <p className="text-xs text-slate-500 font-medium">Sign in to manage orders, wishlist, and instant checkout</p>
+          <p className="text-xs text-slate-500 font-medium">
+            Sign in to manage orders, wishlist, and instant checkout
+          </p>
         </div>
 
         <Card className="rounded-3xl border border-slate-200/80 bg-white p-2 shadow-xl shadow-slate-200/50">
           <CardHeader className="space-y-1 text-center pb-4 border-b border-slate-100">
-            <CardTitle className="text-xl font-black text-slate-900">
-              Welcome Back
-            </CardTitle>
+            <CardTitle className="text-xl font-black text-slate-900">Welcome Back</CardTitle>
             <CardDescription className="text-xs text-slate-500">
               Enter your credentials to access your account
             </CardDescription>
@@ -77,8 +92,16 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-4 pt-6">
+              {/* Admin hint */}
+              <div className="flex items-center gap-2 bg-indigo-50 border border-indigo-100 rounded-xl px-3 py-2.5 text-xs text-indigo-700">
+                <ShieldCheck className="h-4 w-4 shrink-0" />
+                <span>Admin: <strong>admin@bazzar.com</strong> / <strong>admin123</strong></span>
+              </div>
+
               <div className="space-y-1.5">
-                <Label htmlFor="email" className="text-xs font-bold text-slate-700">Email Address</Label>
+                <Label htmlFor="email" className="text-xs font-bold text-slate-700">
+                  Email Address
+                </Label>
                 <div className="relative">
                   <Mail className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
                   <Input
@@ -98,10 +121,9 @@ export default function LoginPage() {
 
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="password" className="text-xs font-bold text-slate-700">Password</Label>
-                  <span className="text-[11px] text-indigo-600 font-semibold cursor-pointer hover:underline">
-                    Forgot Password?
-                  </span>
+                  <Label htmlFor="password" className="text-xs font-bold text-slate-700">
+                    Password
+                  </Label>
                 </div>
                 <div className="relative">
                   <Lock className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
@@ -132,7 +154,7 @@ export default function LoginPage() {
               </Button>
 
               <div className="text-center text-xs text-slate-500 pt-3 border-t border-slate-100 w-full">
-                Don't have a Bazzar account yet?{' '}
+                {"Don't have a Bazzar account yet? "}
                 <Link href="/register" className="font-extrabold text-indigo-600 hover:underline">
                   Create Account
                 </Link>

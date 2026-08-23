@@ -3,10 +3,12 @@
 import * as React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ShoppingBag, Star, Check, Heart, Eye } from 'lucide-react';
+import { ShoppingBag, Star, Check, Heart } from 'lucide-react';
 import { toast } from 'sonner';
 import { Product } from '@/types/product';
 import { useCartStore } from '@/store/cart-store';
+import { useWishlistStore } from '@/store/wishlist-store';
+import { getCurrentUser } from '@/lib/api/auth';
 import { formatCurrency } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -18,8 +20,24 @@ interface ProductCardProps {
 
 export function ProductCard({ product }: ProductCardProps) {
   const addToCart = useCartStore((state) => state.addToCart);
+  const toggleWishlist = useWishlistStore((state) => state.toggleWishlist);
+  const isInWishlist = useWishlistStore((state) => state.isInWishlist);
   const [added, setAdded] = React.useState(false);
-  const [isLiked, setIsLiked] = React.useState(false);
+
+  const isLiked = isInWishlist(product.id);
+
+  // Build CartProduct shape from Product
+  const cartProduct = {
+    id: product.id,
+    name: product.name,
+    description: product.description,
+    price: product.price,
+    stock: product.stock,
+    category: product.category,
+    image: product.image,
+    rating: product.rating,
+    featured: product.featured,
+  };
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -30,7 +48,7 @@ export function ProductCard({ product }: ProductCardProps) {
       return;
     }
 
-    addToCart(product, 1);
+    addToCart(cartProduct, 1);
     setAdded(true);
     toast.success(`Added ${product.name} to cart`);
 
@@ -39,12 +57,19 @@ export function ProductCard({ product }: ProductCardProps) {
     }, 1500);
   };
 
-  const toggleLike = (e: React.MouseEvent) => {
+  const handleToggleWishlist = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsLiked(!isLiked);
+    const user = getCurrentUser();
+    if (!user) {
+      toast.error('Please sign in to use wishlist');
+      return;
+    }
+    await toggleWishlist(cartProduct);
     if (!isLiked) {
-      toast.success(`Saved ${product.name} to wishlist`);
+      toast.success(`Saved ${product.name} to wishlist ❤️`);
+    } else {
+      toast.info(`Removed ${product.name} from wishlist`);
     }
   };
 
@@ -76,10 +101,10 @@ export function ProductCard({ product }: ProductCardProps) {
           </Badge>
         </div>
 
-        {/* Quick Actions (Wishlist & View) */}
+        {/* Quick Actions (Wishlist) */}
         <div className="absolute top-3 right-3 flex flex-col gap-1.5 z-10">
           <button
-            onClick={toggleLike}
+            onClick={handleToggleWishlist}
             className={`h-8 w-8 rounded-full flex items-center justify-center transition-all ${
               isLiked
                 ? 'bg-rose-500 text-white shadow-md'

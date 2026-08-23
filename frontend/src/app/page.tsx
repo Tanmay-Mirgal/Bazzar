@@ -23,10 +23,19 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
 export default async function HomePage() {
-  const [featuredProducts, categories] = await Promise.all([
-    getFeaturedProducts(),
-    getCategories(),
-  ]);
+  let featuredProducts: any[] = [];
+  let categories: any[] = [];
+
+  try {
+    const [prods, cats] = await Promise.all([
+      getFeaturedProducts(),
+      getCategories(),
+    ]);
+    featuredProducts = prods;
+    categories = cats;
+  } catch {
+    // Backend may be starting up — gracefully show empty state
+  }
 
   const categoryIcons: Record<string, any> = {
     Electronics: Headphones,

@@ -3,9 +3,9 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { placeOrder } from '@/lib/api/orders';
+import { placeOrder, BackendOrder } from '@/lib/api/orders';
 import { useCartStore } from '@/store/cart-store';
-import { CheckoutFormValues, Order } from '@/types/order';
+import { getCurrentUser } from '@/lib/api/auth';
 import { formatCurrency } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,9 +20,9 @@ export default function CheckoutPage() {
 
   const [mounted, setMounted] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
-  const [completedOrder, setCompletedOrder] = React.useState<Order | null>(null);
+  const [completedOrder, setCompletedOrder] = React.useState<BackendOrder | null>(null);
 
-  const [formValues, setFormValues] = React.useState<CheckoutFormValues>({
+  const [formValues, setFormValues] = React.useState({
     fullName: '',
     email: '',
     phone: '',
@@ -31,7 +31,7 @@ export default function CheckoutPage() {
     postalCode: '',
   });
 
-  const [errors, setErrors] = React.useState<Partial<Record<keyof CheckoutFormValues, string>>>({});
+  const [errors, setErrors] = React.useState<Record<string, string>>({});
 
   React.useEffect(() => {
     setMounted(true);
@@ -103,24 +103,31 @@ export default function CheckoutPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!validate()) {
       toast.error('Please fill in all required shipping details');
       return;
     }
 
-    setIsLoading(true);
+    const user = getCurrentUser();
+    if (!user) {
+      toast.error('Please sign in to place an order');
+      router.push('/login');
+      return;
+    }
 
+    setIsLoading(true);
     try {
       const order = await placeOrder({
-        customerInfo: formValues,
-        items: cartItems,
-        totalAmount: grandTotal,
+        fullName: formValues.fullName,
+        email: formValues.email,
+        phoneNumber: formValues.phone,
+        address: formValues.address,
+        city: formValues.city,
+        postalCode: formValues.postalCode,
       });
-
-      setCompletedOrder(order);
+      setCompletedOrder(order as any);
       clearCart();
-      toast.success('Order placed successfully!');
+      toast.success('Order placed successfully! 🎉');
     } catch (err: any) {
       toast.error(err.message || 'Failed to place order');
     } finally {
@@ -137,14 +144,14 @@ export default function CheckoutPage() {
             <CheckCircle2 className="h-10 w-10" />
           </div>
 
-          <div className="space-y-2">
+        <div className="space-y-2">
             <span className="text-xs font-extrabold uppercase tracking-widest text-emerald-600">Payment & Order Verified</span>
             <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">Order Confirmed!</h1>
             <p className="text-xs text-slate-500">
-              Thank you for your order, <strong className="text-slate-900 font-bold">{completedOrder.customerInfo.fullName}</strong>. We are processing it now!
+              Thank you, <strong className="text-slate-900 font-bold">{(completedOrder as any)?.fullName || formValues.fullName}</strong>. Your order is being processed!
             </p>
             <p className="text-xs text-indigo-600 font-mono font-bold bg-indigo-50 inline-block px-3 py-1 rounded-full border border-indigo-100">
-              Order Reference ID: #{completedOrder.id || 'BZ-' + Math.floor(100000 + Math.random() * 900000)}
+              Order ID: #{(completedOrder as any)?.id || 'BZ-' + Math.floor(100000 + Math.random() * 900000)}
             </p>
           </div>
 
@@ -156,10 +163,10 @@ export default function CheckoutPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-4 text-xs space-y-1.5 text-slate-600">
-              <p className="font-bold text-slate-900 text-sm">{completedOrder.customerInfo.fullName}</p>
-              <p>{completedOrder.customerInfo.address}</p>
-              <p>{completedOrder.customerInfo.city}, {completedOrder.customerInfo.postalCode}</p>
-              <p className="pt-2 text-slate-400 font-medium">{completedOrder.customerInfo.email} • {completedOrder.customerInfo.phone}</p>
+              <p className="font-bold text-slate-900 text-sm">{(completedOrder as any)?.fullName || formValues.fullName}</p>
+              <p>{(completedOrder as any)?.address || formValues.address}</p>
+              <p>{(completedOrder as any)?.city}, {(completedOrder as any)?.postalCode}</p>
+              <p className="pt-2 text-slate-400 font-medium">{(completedOrder as any)?.email} • {(completedOrder as any)?.phoneNumber}</p>
             </CardContent>
           </Card>
 

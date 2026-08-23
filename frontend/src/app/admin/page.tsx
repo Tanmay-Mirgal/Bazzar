@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { getProducts, createProduct, deleteProduct } from '@/lib/api/products';
 import { getCategories } from '@/lib/api/categories';
 import { getCurrentUser } from '@/lib/api/auth';
+import { getAllOrders, BackendOrder } from '@/lib/api/orders';
 import { Product } from '@/types/product';
 import { Category } from '@/types/category';
 import { formatCurrency } from '@/lib/utils';
@@ -39,6 +40,7 @@ export default function AdminDashboardPage() {
   // Data state
   const [products, setProducts] = React.useState<Product[]>([]);
   const [categories, setCategories] = React.useState<Category[]>([]);
+  const [orders, setOrders] = React.useState<BackendOrder[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
 
   // New Product Form State
@@ -50,49 +52,29 @@ export default function AdminDashboardPage() {
   const [newProductCategoryId, setNewProductCategoryId] = React.useState('');
   const [isSubmittingProduct, setIsSubmittingProduct] = React.useState(false);
 
-  // Mock Orders State for Admin
-  const [mockOrders, setMockOrders] = React.useState([
-    {
-      id: 1,
-      customerName: 'Tanmay Mirgal',
-      email: 'tanmay@example.com',
-      totalAmount: 2999.00,
-      status: 'PLACED',
-      itemsCount: 1,
-      date: '2026-08-22T21:55:00Z',
-    },
-    {
-      id: 2,
-      customerName: 'Rahul Sharma',
-      email: 'rahul@example.com',
-      totalAmount: 80598.00,
-      status: 'PROCESSING',
-      itemsCount: 2,
-      date: '2026-08-22T20:12:00Z',
-    },
-    {
-      id: 3,
-      customerName: 'Priya Patel',
-      email: 'priya@example.com',
-      totalAmount: 1499.00,
-      status: 'DELIVERED',
-      itemsCount: 1,
-      date: '2026-08-21T18:40:00Z',
-    },
-  ]);
-
   React.useEffect(() => {
     setMounted(true);
     const user = getCurrentUser();
-    // Allow access for testing or admin role
-  }, []);
+    if (!user || (user.role !== 'ROLE_ADMIN' && user.email !== 'admin@bazzar.com')) {
+      toast.error('Access Denied. Admins only.');
+      router.push('/login');
+    }
+  }, [router]);
 
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [prods, cats] = await Promise.all([getProducts(), getCategories()]);
+      const [prods, cats, ords] = await Promise.all([
+        getProducts(),
+        getCategories(),
+        getAllOrders().catch((err) => {
+          console.warn('Orders fetch failed or unauthorized', err);
+          return [] as BackendOrder[];
+        }),
+      ]);
       setProducts(prods);
       setCategories(cats);
+      setOrders(ords);
     } catch (err) {
       console.error('Failed to fetch admin data', err);
     } finally {
@@ -155,7 +137,7 @@ export default function AdminDashboardPage() {
 
   if (!mounted) return null;
 
-  const totalRevenue = mockOrders.reduce((acc, o) => acc + o.totalAmount, 0) + 125000;
+  const totalRevenue = orders.reduce((acc, o) => acc + Number(o.totalAmount), 0);
 
   return (
     <div className="bg-slate-50 min-h-screen pb-16">
@@ -201,7 +183,7 @@ export default function AdminDashboardPage() {
             </div>
             <div>
               <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Total Customer Orders</p>
-              <h3 className="text-2xl font-black text-slate-900 mt-0.5">{mockOrders.length + 14} Orders</h3>
+              <h3 className="text-2xl font-black text-slate-900 mt-0.5">{orders.length} Orders</h3>
             </div>
           </Card>
 
@@ -256,7 +238,7 @@ export default function AdminDashboardPage() {
                 : 'text-slate-600 hover:bg-slate-200/60'
             }`}
           >
-            Customer Orders ({mockOrders.length})
+            Customer Orders ({orders.length})
           </button>
           <button
             onClick={() => setActiveTab('manage-products')}
@@ -408,11 +390,11 @@ export default function AdminDashboardPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-xs">
-                    {mockOrders.map((order) => (
+                    {orders.map((order) => (
                       <tr key={order.id} className="hover:bg-slate-50/80 transition-colors">
                         <td className="py-4 font-mono font-bold text-indigo-600">#{order.id}</td>
                         <td className="py-4 font-bold text-slate-900">
-                          {order.customerName}
+                          {order.fullName}
                           <span className="block text-[11px] text-slate-400 font-normal">{order.email}</span>
                         </td>
                         <td className="py-4 font-black text-slate-900">{formatCurrency(order.totalAmount)}</td>
@@ -429,7 +411,7 @@ export default function AdminDashboardPage() {
                             {order.status}
                           </Badge>
                         </td>
-                        <td className="py-4 text-slate-500">{new Date(order.date).toLocaleDateString()}</td>
+                        <td className="py-4 text-slate-500">{new Date(order.createdAt).toLocaleDateString()}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -497,10 +479,10 @@ export default function AdminDashboardPage() {
                 </CardHeader>
                 <CardContent className="pt-4">
                   <div className="space-y-3">
-                    {mockOrders.map((ord) => (
+                    {orders.slice(0, 5).map((ord) => (
                       <div key={ord.id} className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 text-xs">
                         <div>
-                          <p className="font-bold text-slate-900">{ord.customerName} (#{ord.id})</p>
+                          <p className="font-bold text-slate-900">{ord.fullName} (#{ord.id})</p>
                           <p className="text-slate-400 text-[11px]">{ord.email}</p>
                         </div>
                         <div className="text-right">

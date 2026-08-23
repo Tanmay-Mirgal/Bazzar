@@ -4,6 +4,8 @@ import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { register } from '@/lib/api/auth';
+import { useCartStore } from '@/store/cart-store';
+import { useWishlistStore } from '@/store/wishlist-store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,6 +21,8 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = React.useState('');
   const [isLoading, setIsLoading] = React.useState(false);
   const [errors, setErrors] = React.useState<Record<string, string>>({});
+  const setCartAuth = useCartStore((s) => s.setAuthenticated);
+  const setWishlistAuth = useWishlistStore((s) => s.setAuthenticated);
 
   const validate = () => {
     const errs: Record<string, string> = {};
@@ -44,19 +48,15 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!validate()) return;
-
     setIsLoading(true);
     try {
-      const response = await register({
-        name,
-        email,
-        password,
-        confirmPassword,
-      });
-      toast.success(response.message || 'Account created successfully! Please sign in.');
-      router.push('/login');
+      await register({ name, email, password, confirmPassword });
+      // New users always get ROLE_USER — sync stores and go to homepage
+      setCartAuth(true);
+      setWishlistAuth(true);
+      toast.success('Account created! Welcome to Bazzar 🎉');
+      router.push('/');
     } catch (err: any) {
       toast.error(err.message || 'Failed to create account');
     } finally {

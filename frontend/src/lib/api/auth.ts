@@ -1,63 +1,67 @@
 import { LoginCredentials, RegisterData, AuthResponse, User } from '@/types/user';
-import { simulateNetworkDelay } from './client';
+import { apiFetch } from './client';
+
+interface BackendAuthResponse {
+  token: string;
+  user: {
+    id: number;
+    name: string;
+    email: string;
+    role: string;
+  };
+}
 
 export async function login(credentials: LoginCredentials): Promise<AuthResponse> {
-  await simulateNetworkDelay(600);
-
-  if (!credentials.email || !credentials.password) {
-    throw new Error('Email and password are required');
-  }
-
-  const isAdmin = credentials.email.toLowerCase() === 'admin@bazzar.com' || credentials.email.toLowerCase().includes('admin');
-  const role = isAdmin ? 'ROLE_ADMIN' : 'ROLE_USER';
+  const data = await apiFetch<BackendAuthResponse>('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({
+      email: credentials.email,
+      password: credentials.password,
+    }),
+  });
 
   const user: User = {
-    id: isAdmin ? 'admin-1' : `usr-${Date.now()}`,
-    name: isAdmin ? 'Store Administrator' : (credentials.email.split('@')[0] || 'Customer User'),
-    email: credentials.email,
-    role: role,
+    id: String(data.user.id),
+    name: data.user.name,
+    email: data.user.email,
+    role: data.user.role,
   };
 
   if (typeof window !== 'undefined') {
     localStorage.setItem('bazzar_user', JSON.stringify(user));
-    localStorage.setItem('bazzar_token', 'mock-jwt-token-' + role.toLowerCase());
+    localStorage.setItem('bazzar_token', data.token);
   }
 
-  return {
-    user,
-    token: 'mock-jwt-token-' + role.toLowerCase(),
-    message: isAdmin ? 'Logged in as Admin' : 'Login successful',
-  };
+  return { user, token: data.token, message: 'Login successful' };
 }
 
 export async function register(data: RegisterData): Promise<AuthResponse> {
-  await simulateNetworkDelay(700);
-
-  if (!data.name || !data.email || !data.password) {
-    throw new Error('All required fields must be filled');
-  }
-
   if (data.confirmPassword && data.password !== data.confirmPassword) {
     throw new Error('Passwords do not match');
   }
 
+  const response = await apiFetch<BackendAuthResponse>('/auth/register', {
+    method: 'POST',
+    body: JSON.stringify({
+      name: data.name,
+      email: data.email,
+      password: data.password,
+    }),
+  });
+
   const user: User = {
-    id: `usr-${Date.now()}`,
-    name: data.name,
-    email: data.email,
-    role: 'ROLE_USER',
+    id: String(response.user.id),
+    name: response.user.name,
+    email: response.user.email,
+    role: response.user.role,
   };
 
   if (typeof window !== 'undefined') {
     localStorage.setItem('bazzar_user', JSON.stringify(user));
-    localStorage.setItem('bazzar_token', 'mock-jwt-token-user');
+    localStorage.setItem('bazzar_token', response.token);
   }
 
-  return {
-    user,
-    token: 'mock-jwt-token-user',
-    message: 'Account created successfully in database',
-  };
+  return { user, token: response.token, message: 'Account created successfully' };
 }
 
 export function getCurrentUser(): User | null {
@@ -65,7 +69,25 @@ export function getCurrentUser(): User | null {
   try {
     const data = localStorage.getItem('bazzar_user');
     return data ? JSON.parse(data) : null;
-  } catch (err) {
+  } catch {
+    return null;
+  }
+}
+
+export async function refreshCurrentUser(): Promise<User | null> {
+  try {
+    const userData = await apiFetch<{ id: number; name: string; email: string; role: string }>('/auth/me');
+    const user: User = {
+      id: String(userData.id),
+      name: userData.name,
+      email: userData.email,
+      role: userData.role,
+    };
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('bazzar_user', JSON.stringify(user));
+    }
+    return user;
+  } catch {
     return null;
   }
 }

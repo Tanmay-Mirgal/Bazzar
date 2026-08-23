@@ -1,35 +1,61 @@
-import { Product, ProductFilterParams } from '@/types/product';
-import { MOCK_PRODUCTS } from '@/data/mock-data';
-import { simulateNetworkDelay } from './client';
+import { ProductFilterParams } from '@/types/product';
+import { apiFetch, apiFetchNoBody } from './client';
+
+// Backend product response shape
+export interface BackendProduct {
+  id: number;
+  name: string;
+  description: string;
+  price: number;
+  stock: number;
+  image: string;
+  category: { id: number; name: string };
+}
+
+// Normalized frontend product shape
+export interface Product {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  stock: number;
+  category: string;
+  categoryId: number;
+  image: string;
+  rating?: number;
+  featured?: boolean;
+}
+
+function normalize(p: BackendProduct): Product {
+  return {
+    id: String(p.id),
+    name: p.name,
+    description: p.description,
+    price: Number(p.price),
+    stock: p.stock,
+    category: p.category?.name ?? '',
+    categoryId: p.category?.id ?? 0,
+    image: p.image || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400',
+    rating: 4.8,
+    featured: false,
+  };
+}
 
 export async function getProducts(params?: ProductFilterParams): Promise<Product[]> {
-  await simulateNetworkDelay(400);
+  const query = new URLSearchParams();
+  if (params?.search) query.set('search', params.search);
+  if (params?.category && params.category.toLowerCase() !== 'all')
+    query.set('category', params.category);
 
-  let result = [...MOCK_PRODUCTS];
+  const qs = query.toString();
+  const raw = await apiFetch<BackendProduct[]>(`/products${qs ? `?${qs}` : ''}`);
+  let result = raw.map(normalize);
 
-  if (params?.category && params.category.toLowerCase() !== 'all') {
-    result = result.filter(
-      (p) => p.category.toLowerCase() === params.category!.toLowerCase()
-    );
-  }
-
-  if (params?.search && params.search.trim() !== '') {
-    const query = params.search.toLowerCase().trim();
-    result = result.filter(
-      (p) =>
-        p.name.toLowerCase().includes(query) ||
-        p.description.toLowerCase().includes(query) ||
-        p.category.toLowerCase().includes(query)
-    );
-  }
-
-  if (params?.minPrice !== undefined) {
+  // Client-side filtering for price/sort (not in backend)
+  if (params?.minPrice !== undefined)
     result = result.filter((p) => p.price >= params.minPrice!);
-  }
-
-  if (params?.maxPrice !== undefined) {
+  if (params?.maxPrice !== undefined)
     result = result.filter((p) => p.price <= params.maxPrice!);
-  }
 
   if (params?.sortBy) {
     switch (params.sortBy) {
@@ -42,9 +68,6 @@ export async function getProducts(params?: ProductFilterParams): Promise<Product
       case 'name':
         result.sort((a, b) => a.name.localeCompare(b.name));
         break;
-      case 'newest':
-      default:
-        break;
     }
   }
 
@@ -52,14 +75,18 @@ export async function getProducts(params?: ProductFilterParams): Promise<Product
 }
 
 export async function getProductById(id: string): Promise<Product | null> {
-  await simulateNetworkDelay(300);
-  const product = MOCK_PRODUCTS.find((p) => p.id === id);
-  return product || null;
+  try {
+    const raw = await apiFetch<BackendProduct>(`/products/${id}`);
+    return normalize(raw);
+  } catch {
+    return null;
+  }
 }
 
 export async function getFeaturedProducts(): Promise<Product[]> {
-  await simulateNetworkDelay(350);
-  return MOCK_PRODUCTS.filter((p) => p.featured);
+  const all = await getProducts();
+  // Featured = first 8 products (newest seeded ones)
+  return all.slice(0, 8);
 }
 
 export async function createProduct(data: {
@@ -70,37 +97,32 @@ export async function createProduct(data: {
   image?: string;
   categoryId: number;
 }): Promise<Product> {
-  await simulateNetworkDelay(500);
+  const raw = await apiFetch<BackendProduct>('/products', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+  return normalize(raw);
+}
 
-  const categoryMap: Record<number, string> = {
-    1: 'Electronics',
-    2: 'Clothing',
-    3: 'Books',
-    4: 'Accessories',
-  };
-
-  const newProduct: Product = {
-    id: String(Date.now()),
-    name: data.name,
-    description: data.description,
-    price: data.price,
-    stock: data.stock,
-    image: data.image || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400',
-    category: categoryMap[data.categoryId] || 'General',
-    rating: 4.8,
-    featured: true,
-  };
-
-  MOCK_PRODUCTS.unshift(newProduct);
-  return newProduct;
+export async function updateProduct(
+  id: string,
+  data: {
+    name: string;
+    description: string;
+    price: number;
+    stock: number;
+    image?: string;
+    categoryId: number;
+  }
+): Promise<Product> {
+  const raw = await apiFetch<BackendProduct>(`/products/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+  return normalize(raw);
 }
 
 export async function deleteProduct(id: string): Promise<boolean> {
-  await simulateNetworkDelay(300);
-  const index = MOCK_PRODUCTS.findIndex((p) => p.id === id);
-  if (index > -1) {
-    MOCK_PRODUCTS.splice(index, 1);
-    return true;
-  }
-  return false;
+  await apiFetchNoBody(`/products/${id}`, { method: 'DELETE' });
+  return true;
 }

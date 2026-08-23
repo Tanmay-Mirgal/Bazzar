@@ -1,14 +1,62 @@
+'use client';
+
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { CartItem } from '@/types/cart';
-import { Product } from '@/types/product';
+import {
+  getBackendCart,
+  addCartItemToBackend,
+  updateCartItemInBackend,
+  removeCartItemFromBackend,
+  BackendCartItem,
+} from '@/lib/api/cart';
+
+// Normalized frontend CartItem shape
+export interface CartProduct {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  stock: number;
+  category: string;
+  image: string;
+  rating?: number;
+  featured?: boolean;
+}
+
+export interface CartItem {
+  backendItemId?: number;
+  product: CartProduct;
+  quantity: number;
+}
+
+function normalizeBackendCartItem(item: BackendCartItem): CartItem {
+  return {
+    backendItemId: item.id,
+    product: {
+      id: String(item.product.id),
+      name: item.product.name,
+      description: item.product.description,
+      price: Number(item.product.price),
+      stock: item.product.stock,
+      category: item.product.category?.name ?? '',
+      image: item.product.image || '',
+    },
+    quantity: item.quantity,
+  };
+}
 
 interface CartState {
   cartItems: CartItem[];
-  addToCart: (product: Product, quantity?: number) => void;
-  removeFromCart: (productId: string) => void;
-  increaseQuantity: (productId: string) => void;
-  decreaseQuantity: (productId: string) => void;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+
+  // Actions
+  setAuthenticated: (auth: boolean) => void;
+  syncFromBackend: () => Promise<void>;
+  addToCart: (product: CartProduct, quantity?: number) => Promise<void>;
+  removeFromCart: (productId: string) => Promise<void>;
+  increaseQuantity: (productId: string) => Promise<void>;
+  decreaseQuantity: (productId: string) => Promise<void>;
   clearCart: () => void;
   getTotalItems: () => number;
   getTotalPrice: () => number;
@@ -18,97 +66,117 @@ export const useCartStore = create<CartState>()(
   persist(
     (set, get) => ({
       cartItems: [],
+      isAuthenticated: false,
+      isLoading: false,
 
-      addToCart: (product: Product, quantity: number = 1) => {
-        set((state) => {
-          const existingItemIndex = state.cartItems.findIndex(
-            (item) => item.product.id === product.id
-          );
-
-          if (existingItemIndex > -1) {
-            const updatedItems = [...state.cartItems];
-            const currentItem = updatedItems[existingItemIndex];
-            const newQuantity = Math.min(
-              currentItem.quantity + quantity,
-              product.stock
-            );
-
-            updatedItems[existingItemIndex] = {
-              ...currentItem,
-              quantity: newQuantity,
-            };
-
-            return { cartItems: updatedItems };
-          } else {
-            const initialQuantity = Math.min(quantity, product.stock);
-            if (initialQuantity <= 0) return state;
-
-            return {
-              cartItems: [
-                ...state.cartItems,
-                { product, quantity: initialQuantity },
-              ],
-            };
-          }
-        });
+      setAuthenticated: (auth: boolean) => {
+        set({ isAuthenticated: auth });
+        if (auth) {
+          get().syncFromBackend();
+        } else {
+          set({ cartItems: [] });
+        }
       },
 
-      removeFromCart: (productId: string) => {
-        set((state) => ({
-          cartItems: state.cartItems.filter(
-            (item) => item.product.id !== productId
-          ),
-        }));
+      syncFromBackend: async () => {
+        set({ isLoading: true });
+        try {
+          const cart = await getBackendCart();
+          set({ cartItems: cart.items.map(normalizeBackendCartItem), isLoading: false });
+        } catch {
+          set({ isLoading: false });
+        }
       },
 
-      increaseQuantity: (productId: string) => {
-        set((state) => {
-          const updatedItems = state.cartItems.map((item) => {
-            if (item.product.id === productId) {
-              const nextQty = item.quantity + 1;
-              if (nextQty <= item.product.stock) {
-                return { ...item, quantity: nextQty };
-              }
+      addToCart: async (product: CartProduct, quantity = 1) => {
+        const { isAuthenticated } = get();
+        if (!isAuthenticated) {
+          // Local-only cart for guests
+          set((state) => {
+            const idx = state.cartItems.findIndex((i) => i.product.id === product.id);
+            if (idx > -1) {
+              const items = [...state.cartItems];
+              items[idx] = { ...items[idx], quantity: Math.min(items[idx].quantity + quantity, product.stock) };
+              return { cartItems: items };
             }
-            return item;
+            return { cartItems: [...state.cartItems, { product, quantity: Math.min(quantity, product.stock) }] };
           });
-          return { cartItems: updatedItems };
-        });
+          return;
+        }
+
+        try {
+          const cart = await addCartItemToBackend(product.id, quantity);
+          set({ cartItems: cart.items.map(normalizeBackendCartItem) });
+        } catch (e) {
+          console.error('Failed to add to cart:', e);
+        }
       },
 
-      decreaseQuantity: (productId: string) => {
-        set((state) => {
-          const updatedItems = state.cartItems.map((item) => {
-            if (item.product.id === productId) {
-              const nextQty = item.quantity - 1;
-              if (nextQty >= 1) {
-                return { ...item, quantity: nextQty };
-              }
-            }
-            return item;
-          });
-          return { cartItems: updatedItems };
-        });
+      removeFromCart: async (productId: string) => {
+        const { isAuthenticated, cartItems } = get();
+        if (!isAuthenticated) {
+          set({ cartItems: cartItems.filter((i) => i.product.id !== productId) });
+          return;
+        }
+        const item = cartItems.find((i) => i.product.id === productId);
+        if (!item?.backendItemId) return;
+        try {
+          const cart = await removeCartItemFromBackend(item.backendItemId);
+          set({ cartItems: cart.items.map(normalizeBackendCartItem) });
+        } catch (e) {
+          console.error('Failed to remove from cart:', e);
+        }
       },
 
-      clearCart: () => {
-        set({ cartItems: [] });
+      increaseQuantity: async (productId: string) => {
+        const { isAuthenticated, cartItems } = get();
+        const item = cartItems.find((i) => i.product.id === productId);
+        if (!item) return;
+        const newQty = item.quantity + 1;
+        if (newQty > item.product.stock) return;
+
+        if (!isAuthenticated) {
+          set({ cartItems: cartItems.map((i) => i.product.id === productId ? { ...i, quantity: newQty } : i) });
+          return;
+        }
+        if (!item.backendItemId) return;
+        try {
+          const cart = await updateCartItemInBackend(item.backendItemId, newQty);
+          set({ cartItems: cart.items.map(normalizeBackendCartItem) });
+        } catch (e) {
+          console.error('Failed to increase quantity:', e);
+        }
       },
 
-      getTotalItems: () => {
-        return get().cartItems.reduce((acc, item) => acc + item.quantity, 0);
+      decreaseQuantity: async (productId: string) => {
+        const { isAuthenticated, cartItems } = get();
+        const item = cartItems.find((i) => i.product.id === productId);
+        if (!item || item.quantity <= 1) return;
+        const newQty = item.quantity - 1;
+
+        if (!isAuthenticated) {
+          set({ cartItems: cartItems.map((i) => i.product.id === productId ? { ...i, quantity: newQty } : i) });
+          return;
+        }
+        if (!item.backendItemId) return;
+        try {
+          const cart = await updateCartItemInBackend(item.backendItemId, newQty);
+          set({ cartItems: cart.items.map(normalizeBackendCartItem) });
+        } catch (e) {
+          console.error('Failed to decrease quantity:', e);
+        }
       },
 
-      getTotalPrice: () => {
-        return get().cartItems.reduce(
-          (acc, item) => acc + item.product.price * item.quantity,
-          0
-        );
-      },
+      clearCart: () => set({ cartItems: [] }),
+
+      getTotalItems: () => get().cartItems.reduce((acc, item) => acc + item.quantity, 0),
+      getTotalPrice: () =>
+        get().cartItems.reduce((acc, item) => acc + item.product.price * item.quantity, 0),
     }),
     {
       name: 'bazzar-cart-storage',
       storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({ cartItems: state.cartItems }),
     }
   )
 );

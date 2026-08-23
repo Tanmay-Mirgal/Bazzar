@@ -7,6 +7,8 @@ import { useParams, useRouter } from 'next/navigation';
 import { getProductById, getProducts } from '@/lib/api/products';
 import { Product } from '@/types/product';
 import { useCartStore } from '@/store/cart-store';
+import { useWishlistStore } from '@/store/wishlist-store';
+import { getCurrentUser } from '@/lib/api/auth';
 import { formatCurrency } from '@/lib/utils';
 import { QuantitySelector } from '@/components/product/quantity-selector';
 import { ProductCard } from '@/components/product/product-card';
@@ -27,10 +29,12 @@ export default function ProductDetailPage() {
   const [quantity, setQuantity] = React.useState<number>(1);
   const [isLoading, setIsLoading] = React.useState<boolean>(true);
   const [added, setAdded] = React.useState<boolean>(false);
-  const [isLiked, setIsLiked] = React.useState<boolean>(false);
   const [activeTab, setActiveTab] = React.useState<'overview' | 'specs' | 'shipping'>('overview');
 
   const addToCart = useCartStore((state) => state.addToCart);
+  const toggleWishlist = useWishlistStore((state) => state.toggleWishlist);
+  const isInWishlist = useWishlistStore((state) => state.isInWishlist);
+  const isLiked = product ? isInWishlist(product.id) : false;
 
   React.useEffect(() => {
     async function loadData() {
@@ -77,6 +81,30 @@ export default function ProductDetailPage() {
     if (!product) return;
     addToCart(product, quantity);
     router.push('/cart');
+  };
+
+  const handleToggleWishlist = async () => {
+    if (!product) return;
+    const user = getCurrentUser();
+    if (!user) {
+      toast.error('Please sign in to use wishlist');
+      return;
+    }
+    const cartProduct = {
+      id: product.id,
+      name: product.name,
+      description: product.description,
+      price: product.price,
+      stock: product.stock,
+      category: product.category,
+      image: product.image,
+    };
+    await toggleWishlist(cartProduct);
+    if (!isLiked) {
+      toast.success(`Saved ${product.name} to wishlist ❤️`);
+    } else {
+      toast.info(`Removed ${product.name} from wishlist`);
+    }
   };
 
   if (isLoading) {
@@ -160,7 +188,7 @@ export default function ProductDetailPage() {
               </Badge>
             )}
             <button
-              onClick={() => { setIsLiked(!isLiked); toast.success(isLiked ? 'Removed from wishlist' : 'Saved to wishlist'); }}
+              onClick={handleToggleWishlist}
               className={`absolute top-4 right-4 h-10 w-10 rounded-full flex items-center justify-center transition-all ${
                 isLiked ? 'bg-rose-500 text-white shadow-md' : 'bg-white/90 text-slate-700 hover:text-rose-500 shadow-sm'
               }`}

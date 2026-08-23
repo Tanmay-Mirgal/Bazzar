@@ -1,22 +1,58 @@
-import { CheckoutFormValues, Order } from '@/types/order';
-import { CartItem } from '@/types/cart';
-import { simulateNetworkDelay } from './client';
+import { apiFetch } from './client';
 
-export async function placeOrder(orderData: {
-  customerInfo: CheckoutFormValues;
-  items: CartItem[];
-  totalAmount: number;
-}): Promise<Order> {
-  await simulateNetworkDelay(800); // Simulate checkout processing
+export interface PlaceOrderRequest {
+  fullName: string;
+  email: string;
+  phoneNumber: string;
+  address: string;
+  city: string;
+  postalCode: string;
+}
 
-  const newOrder: Order = {
-    id: `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-    items: orderData.items,
-    totalAmount: orderData.totalAmount,
-    customerInfo: orderData.customerInfo,
-    status: 'PROCESSING',
-    createdAt: new Date().toISOString(),
+export interface BackendOrderItem {
+  id: number;
+  product: {
+    id: number;
+    name: string;
+    price: number;
+    image: string;
+    stock: number;
+    category: { id: number; name: string };
+    description: string;
   };
+  quantity: number;
+  price: number;
+}
 
-  return newOrder;
+export interface BackendOrder {
+  id: number;
+  totalAmount: number;
+  status: 'PLACED' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED';
+  fullName: string;
+  email: string;
+  phoneNumber: string;
+  address: string;
+  city: string;
+  postalCode: string;
+  items: BackendOrderItem[];
+  createdAt: string;
+}
+
+export async function placeOrder(request: PlaceOrderRequest): Promise<BackendOrder> {
+  return apiFetch<BackendOrder>('/orders', {
+    method: 'POST',
+    body: JSON.stringify(request),
+  });
+}
+
+export async function getUserOrders(): Promise<BackendOrder[]> {
+  return apiFetch<BackendOrder[]>('/orders');
+}
+
+export async function getAllOrders(): Promise<BackendOrder[]> {
+  return apiFetch<BackendOrder[]>('/orders/all');
+}
+
+export async function getOrderById(id: number): Promise<BackendOrder> {
+  return apiFetch<BackendOrder>(`/orders/${id}`);
 }

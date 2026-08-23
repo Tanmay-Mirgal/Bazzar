@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { ShoppingBag, Search, Menu, User, Sparkles, Heart, Zap, ChevronRight } from 'lucide-react';
 import { useCartStore } from '@/store/cart-store';
+import { useWishlistStore } from '@/store/wishlist-store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -30,6 +31,8 @@ export function Navbar() {
 
   const cartItems = useCartStore((state) => state.cartItems);
   const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+  const wishlistItems = useWishlistStore((state) => state.wishlistItems);
+  const wishlistItemsCount = wishlistItems.length;
 
   React.useEffect(() => {
     setMounted(true);
@@ -102,17 +105,19 @@ export function Navbar() {
                 );
               })}
 
-              <Link
-                href="/admin"
-                className={`px-3 py-1.5 rounded-full transition-all text-xs font-bold flex items-center gap-1.5 ${
-                  pathname.startsWith('/admin')
-                    ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md'
-                    : 'text-amber-600 hover:bg-amber-50 border border-amber-200/80'
-                }`}
-              >
-                <ShieldCheck className="h-3.5 w-3.5" />
-                Admin Dashboard
-              </Link>
+              {mounted && isAdmin && (
+                <Link
+                  href="/admin"
+                  className={`px-3 py-1.5 rounded-full transition-all text-xs font-bold flex items-center gap-1.5 ${
+                    pathname.startsWith('/admin')
+                      ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md'
+                      : 'text-amber-600 hover:bg-amber-50 border border-amber-200/80'
+                  }`}
+                >
+                  <ShieldCheck className="h-3.5 w-3.5" />
+                  Admin Dashboard
+                </Link>
+              )}
             </nav>
           </div>
 
@@ -132,6 +137,26 @@ export function Navbar() {
                 className="pl-9 pr-4 h-10 text-xs rounded-full border-slate-200 bg-slate-50/80 focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-indigo-500 transition-all shadow-xs"
               />
             </form>
+
+            {/* Wishlist Link with Animated Badge */}
+            <Link href="/wishlist">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="relative rounded-full text-slate-800 hover:text-rose-600 hover:bg-rose-50 transition-all"
+                aria-label="Wishlist"
+              >
+                <Heart className="h-5 w-5" />
+                {mounted && wishlistItemsCount > 0 && (
+                  <Badge
+                    variant="default"
+                    className="absolute -top-1 -right-1 h-5 min-w-5 px-1.5 rounded-full p-0 flex items-center justify-center text-[10px] font-bold bg-rose-600 text-white shadow-md shadow-rose-500/30"
+                  >
+                    {wishlistItemsCount}
+                  </Badge>
+                )}
+              </Button>
+            </Link>
 
             {/* Cart Link with Animated Badge */}
             <Link href="/cart">

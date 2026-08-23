@@ -1,21 +1,20 @@
 # ── Stage 1: Build ──────────────────────────────────────────────────────────
 FROM eclipse-temurin:17-jdk-alpine AS build
 
+# Install Maven directly (avoids maven-wrapper.jar issues)
+RUN apk add --no-cache maven
+
 WORKDIR /app
 
-# Copy Maven wrapper + pom first (layer cache trick)
-COPY mvnw pom.xml ./
-COPY .mvn .mvn/
-
-# Make wrapper executable
-RUN chmod +x mvnw
+# Copy pom first for dependency caching
+COPY pom.xml ./
 
 # Download dependencies (cached unless pom.xml changes)
-RUN ./mvnw dependency:go-offline -B
+RUN mvn dependency:go-offline -B
 
 # Copy source and build JAR
 COPY src ./src
-RUN ./mvnw package -DskipTests -B
+RUN mvn package -DskipTests -B
 
 # ── Stage 2: Runtime ─────────────────────────────────────────────────────────
 FROM eclipse-temurin:17-jre-alpine

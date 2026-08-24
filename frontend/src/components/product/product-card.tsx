@@ -109,28 +109,28 @@ export function ProductCard({ product }: ProductCardProps) {
       </Link>
 
       {/* Content */}
-      <div className="flex flex-col flex-1 p-4">
-        <div className="flex items-center justify-between text-[11px] text-[#6B6B6B] mb-1">
-          <span className="font-semibold uppercase tracking-wider">{product.category}</span>
-          <span className="flex items-center gap-1 font-bold text-[#111111]">
+      <div className="flex flex-col flex-1 p-2.5 sm:p-4">
+        <div className="flex items-center justify-between text-[10px] sm:text-[11px] text-[#6B6B6B] mb-1">
+          <span className="font-semibold uppercase tracking-wider truncate max-w-[70%]">{product.category}</span>
+          <span className="flex items-center gap-0.5 sm:gap-1 font-bold text-[#111111] shrink-0">
             <Star className="h-3 w-3 fill-[#111111]" /> {ratingValue.toFixed(1)}
           </span>
         </div>
 
         <Link
           href={`/products/${product.id}`}
-          className="font-bold text-sm text-[#111111] line-clamp-1 hover:text-[#3F46D8] transition-colors mb-1"
+          className="font-bold text-xs sm:text-sm text-[#111111] line-clamp-1 hover:text-[#3F46D8] transition-colors mb-1"
         >
           {product.name}
         </Link>
 
-        <p className="text-xs text-[#6B6B6B] line-clamp-2 mb-4 flex-1">
+        <p className="text-[11px] sm:text-xs text-[#6B6B6B] line-clamp-2 mb-3 sm:mb-4 flex-1 hidden sm:block">
           {product.description}
         </p>
 
         {/* Price & Add Action */}
-        <div className="flex items-center justify-between pt-3 border-t border-[#E8E8E8] mt-auto">
-          <span className="text-base font-bold text-[#111111]">
+        <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-1 pt-2 sm:pt-3 border-t border-[#E8E8E8] mt-auto">
+          <span className="text-xs sm:text-base font-black text-[#111111]">
             {formatCurrency(product.price)}
           </span>
 
@@ -138,7 +138,7 @@ export function ProductCard({ product }: ProductCardProps) {
             size="sm"
             onClick={handleAddToCart}
             disabled={isOutOfStock}
-            className={`h-8 px-3 rounded-none font-semibold text-xs transition-colors ${
+            className={`h-7 sm:h-8 px-2 sm:px-3 rounded-none font-semibold text-[10px] sm:text-xs transition-colors ${
               added
                 ? 'bg-emerald-600 text-white'
                 : 'bg-[#111111] hover:bg-[#3F46D8] text-white'
@@ -146,11 +146,11 @@ export function ProductCard({ product }: ProductCardProps) {
           >
             {added ? (
               <>
-                <Check className="h-3.5 w-3.5 mr-1" /> Added
+                <Check className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-0.5 sm:mr-1" /> Added
               </>
             ) : (
               <>
-                <ShoppingBag className="h-3.5 w-3.5 mr-1" /> Add
+                <ShoppingBag className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-0.5 sm:mr-1" /> Add
               </>
             )}
           </Button>

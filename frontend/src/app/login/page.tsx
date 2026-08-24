@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Lock, Mail, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Lock, Mail, ArrowRight } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -97,12 +97,6 @@ export default function LoginPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Dev Admin Hint */}
-            <div className="flex items-center gap-2 bg-[#F7F7F5] border border-[#E8E8E8] p-3 text-xs text-[#111111]">
-              <ShieldCheck className="h-4 w-4 text-[#3F46D8] shrink-0" />
-              <span>Admin: <strong>admin@bazzar.com</strong> / <strong>admin123</strong></span>
-            </div>
-
             <div className="space-y-4">
               <div className="space-y-1.5">
                 <Label htmlFor="email" className="text-xs font-bold text-[#111111]">

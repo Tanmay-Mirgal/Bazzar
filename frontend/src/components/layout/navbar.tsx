@@ -206,6 +206,17 @@ export function Navbar() {
                           <ChevronRight className="h-4 w-4 text-[#6B6B6B]" />
                         </Link>
                       ))}
+
+                      {mounted && isAdmin && (
+                        <Link
+                          href="/admin"
+                          onClick={() => setIsMobileMenuOpen(false)}
+                          className="text-xs font-bold py-3 border-b border-[#E8E8E8] text-indigo-600 flex items-center justify-between"
+                        >
+                          <span className="flex items-center gap-1.5"><ShieldCheck className="h-4 w-4" /> Admin Console</span>
+                          <ChevronRight className="h-4 w-4 text-indigo-600" />
+                        </Link>
+                      )}
                     </div>
 
                     <div className="pt-4 flex flex-col gap-2">

@@ -3,9 +3,12 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { ShoppingBag, Search, Menu, User, Heart, ShieldCheck, LogOut, ChevronRight, X } from 'lucide-react';
+import { ShoppingBag, Search, Menu, User, Heart, ShieldCheck, LogOut, ChevronRight, X, Loader2 } from 'lucide-react';
 import { useCartStore } from '@/store/cart-store';
 import { useWishlistStore } from '@/store/wishlist-store';
+import { getProducts } from '@/lib/api/products';
+import { Product } from '@/types/product';
+import { formatCurrency } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -24,9 +27,14 @@ export function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
   const [searchQuery, setSearchQuery] = React.useState('');
+  const [searchResults, setSearchResults] = React.useState<Product[]>([]);
+  const [isSearching, setIsSearching] = React.useState(false);
+  const [showSearchResults, setShowSearchResults] = React.useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const [mounted, setMounted] = React.useState(false);
   const [currentUser, setCurrentUser] = React.useState<UserType | null>(null);
+
+  const searchContainerRef = React.useRef<HTMLDivElement>(null);
 
   const cartItems = useCartStore((state) => state.cartItems);
   const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
@@ -38,6 +46,44 @@ export function Navbar() {
     setCurrentUser(getCurrentUser());
   }, [pathname]);
 
+  // Live Autocomplete Debounced Fetch
+  React.useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSearchResults([]);
+      setShowSearchResults(false);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setIsSearching(true);
+      try {
+        const results = await getProducts({ search: searchQuery.trim() });
+        setSearchResults(results.slice(0, 5));
+        setShowSearchResults(true);
+      } catch (err) {
+        console.error('Search query failed:', err);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 250);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Click outside listener for search dropdown
+  React.useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        searchContainerRef.current &&
+        !searchContainerRef.current.contains(event.target as Node)
+      ) {
+        setShowSearchResults(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const handleLogout = () => {
     logout();
     setCurrentUser(null);
@@ -45,11 +91,11 @@ export function Navbar() {
     router.push('/');
   };
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSearchSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (searchQuery.trim()) {
       router.push(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
-      setSearchQuery('');
+      setShowSearchResults(false);
       setIsMobileMenuOpen(false);
     }
   };
@@ -118,17 +164,89 @@ export function Navbar() {
 
           {/* Search & Actions */}
           <div className="flex items-center gap-4">
-            {/* Desktop Search Bar */}
-            <form onSubmit={handleSearchSubmit} className="hidden sm:flex relative items-center w-52 md:w-64">
-              <Search className="absolute left-3 h-3.5 w-3.5 text-[#6B6B6B]" />
-              <Input
-                type="text"
-                placeholder="Search products..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8 pr-3 h-9 text-xs rounded-none border-[#E8E8E8] bg-[#F7F7F5] focus-visible:ring-1 focus-visible:ring-[#111111] transition-all"
-              />
-            </form>
+            
+            {/* Desktop Live Autocomplete Search Bar */}
+            <div ref={searchContainerRef} className="hidden sm:block relative w-56 md:w-72">
+              <form onSubmit={handleSearchSubmit} className="relative flex items-center">
+                <Search className="absolute left-3 h-3.5 w-3.5 text-[#6B6B6B]" />
+                <Input
+                  type="text"
+                  placeholder="Search products, brands..."
+                  value={searchQuery}
+                  onFocus={() => {
+                    if (searchQuery.trim()) setShowSearchResults(true);
+                  }}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 pr-8 h-9 text-xs rounded-xl border-[#E8E8E8] bg-[#FAF9F6] focus-visible:ring-1 focus-visible:ring-[#111111] transition-all"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchQuery('');
+                      setSearchResults([]);
+                      setShowSearchResults(false);
+                    }}
+                    className="absolute right-2.5 text-[#6B6B6B] hover:text-[#111111]"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </form>
+
+              {/* Live Search Autocomplete Dropdown */}
+              {showSearchResults && searchQuery.trim().length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-[#E8E8E8] z-50 overflow-hidden text-xs animate-in fade-in">
+                  <div className="p-2.5 border-b border-[#E8E8E8] bg-[#FAF9F6] text-[10px] font-black uppercase tracking-wider text-[#6B6B6B] flex items-center justify-between">
+                    <span>Matches ({searchResults.length})</span>
+                    {isSearching && <Loader2 className="h-3 w-3 animate-spin text-[#3F46D8]" />}
+                  </div>
+
+                  {searchResults.length === 0 && !isSearching ? (
+                    <div className="p-4 text-center text-xs text-[#6B6B6B]">
+                      No products matching "<span className="font-bold text-[#111111]">{searchQuery}</span>"
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-[#E8E8E8] max-h-64 overflow-y-auto">
+                      {searchResults.map((prod) => (
+                        <Link
+                          key={prod.id}
+                          href={`/products/${prod.id}`}
+                          onClick={() => {
+                            setShowSearchResults(false);
+                            setSearchQuery('');
+                          }}
+                          className="flex items-center gap-3 p-3 hover:bg-[#FAF9F6] transition-colors group"
+                        >
+                          <img
+                            src={prod.image}
+                            alt={prod.name}
+                            className="h-10 w-10 object-cover rounded-lg border border-[#E8E8E8] shrink-0"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="font-extrabold text-[#111111] truncate group-hover:text-[#3F46D8] transition-colors">
+                              {prod.name}
+                            </p>
+                            <span className="text-[10px] text-[#6B6B6B] font-semibold">{prod.category}</span>
+                          </div>
+                          <span className="font-black text-[#111111] text-xs shrink-0">
+                            {formatCurrency(prod.price)}
+                          </span>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+
+                  <button
+                    onClick={() => handleSearchSubmit()}
+                    className="w-full p-3 bg-[#111111] text-white hover:bg-[#3F46D8] font-bold text-center text-[11px] transition-colors flex items-center justify-center gap-1.5"
+                  >
+                    <span>View all results for "{searchQuery}"</span>
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
+            </div>
 
             {/* Wishlist Link */}
             <Link href="/wishlist" className="relative p-2 text-[#111111] hover:text-[#3F46D8] transition-colors" title="Wishlist">
@@ -160,7 +278,7 @@ export function Navbar() {
               </div>
             ) : (
               <Link href="/login" className="hidden sm:block">
-                <Button size="sm" className="h-9 px-4 rounded-none bg-[#111111] hover:bg-[#3F46D8] text-white text-xs font-semibold transition-colors">
+                <Button size="sm" className="h-9 px-4 rounded-xl bg-[#111111] hover:bg-[#3F46D8] text-white text-xs font-semibold transition-colors shadow-xs">
                   Sign In
                 </Button>
               </Link>
@@ -190,7 +308,7 @@ export function Navbar() {
                         placeholder="Search products..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-9 h-10 text-xs rounded-none bg-[#F7F7F5] border-[#E8E8E8]"
+                        className="pl-9 h-10 text-xs rounded-xl bg-[#FAF9F6] border-[#E8E8E8]"
                       />
                     </form>
 
@@ -221,12 +339,12 @@ export function Navbar() {
 
                     <div className="pt-4 flex flex-col gap-2">
                       {mounted && currentUser ? (
-                        <Button onClick={handleLogout} variant="outline" className="w-full rounded-none h-10 border-[#E8E8E8] text-xs font-semibold">
+                        <Button onClick={handleLogout} variant="outline" className="w-full rounded-xl h-10 border-[#E8E8E8] text-xs font-semibold">
                           Sign Out ({currentUser.name})
                         </Button>
                       ) : (
                         <Link href="/login" onClick={() => setIsMobileMenuOpen(false)}>
-                          <Button className="w-full rounded-none h-10 bg-[#111111] text-white text-xs font-semibold">
+                          <Button className="w-full rounded-xl h-10 bg-[#111111] text-white text-xs font-semibold">
                             Sign In / Create Account
                           </Button>
                         </Link>

@@ -19,10 +19,12 @@ interface ProductCardProps {
 export function ProductCard({ product }: ProductCardProps) {
   const addToCart = useCartStore((state) => state.addToCart);
   const toggleWishlist = useWishlistStore((state) => state.toggleWishlist);
-  const isInWishlist = useWishlistStore((state) => state.isInWishlist);
+  const wishlistItems = useWishlistStore((state) => state.wishlistItems);
   const [added, setAdded] = React.useState(false);
 
-  const isLiked = isInWishlist(product.id);
+  const isLiked = React.useMemo(() => {
+    return wishlistItems.some((i) => String(i.product.id) === String(product.id));
+  }, [wishlistItems, product.id]);
 
   const cartProduct = {
     id: product.id,
@@ -57,16 +59,14 @@ export function ProductCard({ product }: ProductCardProps) {
   const handleToggleWishlist = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    const user = getCurrentUser();
-    if (!user) {
-      toast.error('Please sign in to use wishlist');
-      return;
-    }
+
+    const currentlyLiked = isLiked;
     await toggleWishlist(cartProduct);
-    if (!isLiked) {
+
+    if (!currentlyLiked) {
       toast.success(`Saved "${product.name}" to wishlist`);
     } else {
-      toast.info(`Removed from wishlist`);
+      toast.info(`Removed "${product.name}" from wishlist`);
     }
   };
 

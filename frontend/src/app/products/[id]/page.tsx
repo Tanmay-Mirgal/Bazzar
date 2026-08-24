@@ -32,8 +32,11 @@ export default function ProductDetailPage() {
 
   const addToCart = useCartStore((state) => state.addToCart);
   const toggleWishlist = useWishlistStore((state) => state.toggleWishlist);
-  const isInWishlist = useWishlistStore((state) => state.isInWishlist);
-  const isLiked = product ? isInWishlist(product.id) : false;
+  const wishlistItems = useWishlistStore((state) => state.wishlistItems);
+
+  const isLiked = React.useMemo(() => {
+    return product ? wishlistItems.some((i) => String(i.product.id) === String(product.id)) : false;
+  }, [wishlistItems, product]);
 
   React.useEffect(() => {
     async function loadData() {
@@ -84,11 +87,7 @@ export default function ProductDetailPage() {
 
   const handleToggleWishlist = async () => {
     if (!product) return;
-    const user = getCurrentUser();
-    if (!user) {
-      toast.error('Please sign in to use wishlist');
-      return;
-    }
+
     const cartProduct = {
       id: product.id,
       name: product.name,
@@ -98,11 +97,14 @@ export default function ProductDetailPage() {
       category: product.category,
       image: product.image,
     };
+
+    const currentlyLiked = isLiked;
     await toggleWishlist(cartProduct);
-    if (!isLiked) {
+
+    if (!currentlyLiked) {
       toast.success(`Saved "${product.name}" to wishlist`);
     } else {
-      toast.info(`Removed from wishlist`);
+      toast.info(`Removed "${product.name}" from wishlist`);
     }
   };
 

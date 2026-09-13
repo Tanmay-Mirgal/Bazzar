@@ -1,44 +1,46 @@
 package com.bazzar.controller;
 
-import com.bazzar.dto.request.LoginRequest;
-import com.bazzar.dto.request.RegisterRequest;
-import com.bazzar.dto.response.AuthResponse;
+import com.bazzar.config.ClerkUserResolver;
 import com.bazzar.dto.response.UserResponse;
 import com.bazzar.entity.User;
-import com.bazzar.service.AuthService;
-import jakarta.validation.Valid;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * Auth endpoints — registration and login are now handled by Clerk's hosted UI.
+ * This controller only exposes /api/auth/me to get the current user's profile from the DB.
+ *
+ * The legacy /register and /login endpoints are removed.
+ * User creation is triggered by Clerk webhooks (user.created event).
+ */
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
 
-    private final AuthService authService;
+    private final ClerkUserResolver clerkUserResolver;
 
-    public AuthController(AuthService authService) {
-        this.authService = authService;
+    public AuthController(ClerkUserResolver clerkUserResolver) {
+        this.clerkUserResolver = clerkUserResolver;
     }
 
-    @PostMapping("/register")
-    public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
-        AuthResponse response = authService.register(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
-
-    @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
-        AuthResponse response = authService.login(request);
-        return ResponseEntity.ok(response);
-    }
-
+    /**
+     * Returns the current user's profile from the local DB.
+     * The Clerk JWT must be present in the Authorization header.
+     * The user must have been created in the DB via the Clerk webhook first.
+     */
     @GetMapping("/me")
-    public ResponseEntity<UserResponse> getMe(@AuthenticationPrincipal User user) {
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    public ResponseEntity<UserResponse> getMe(@AuthenticationPrincipal Jwt jwt) {
+        if (jwt == null) {
+            return ResponseEntity.status(401).build();
         }
+
+        User user = clerkUserResolver.resolve(jwt);
+        if (user == null) {
+            return ResponseEntity.status(404).build();
+        }
+
         String roleName = user.getRole() != null ? user.getRole().name() : "ROLE_USER";
         UserResponse userResponse = UserResponse.builder()
                 .id(user.getId())
@@ -46,6 +48,7 @@ public class AuthController {
                 .email(user.getEmail())
                 .role(roleName)
                 .build();
+
         return ResponseEntity.ok(userResponse);
     }
 }

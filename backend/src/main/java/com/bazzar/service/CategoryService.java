@@ -57,6 +57,7 @@ public class CategoryService {
     }
 
     public CategoryResponse toResponse(Category category) {
+        if (category == null) return null;
         return CategoryResponse.builder()
                 .id(category.getId())
                 .name(category.getName())

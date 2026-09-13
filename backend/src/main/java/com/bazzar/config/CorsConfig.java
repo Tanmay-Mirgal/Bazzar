@@ -20,7 +20,8 @@ public class CorsConfig {
             "http://localhost:3000",
             "http://localhost:5173",
             "https://*.vercel.app",
-            "*"
+            "*",
+            "https://bazzar.tanmaymirgal.dev"
         ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"));
         config.setAllowedHeaders(List.of("*"));

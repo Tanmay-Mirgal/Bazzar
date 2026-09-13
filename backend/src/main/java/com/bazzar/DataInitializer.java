@@ -2,6 +2,7 @@ package com.bazzar;
 
 import com.bazzar.entity.Category;
 import com.bazzar.entity.Product;
+import com.bazzar.entity.ProductStatus;
 import com.bazzar.repository.CategoryRepository;
 import com.bazzar.repository.ProductRepository;
 import org.slf4j.Logger;
@@ -44,35 +45,78 @@ public class DataInitializer implements CommandLineRunner {
     private final CategoryRepository categoryRepository;
     private final ProductRepository productRepository;
     private final com.bazzar.repository.UserRepository userRepository;
-    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
     private final com.bazzar.repository.CartRepository cartRepository;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
 
     public DataInitializer(CategoryRepository categoryRepository,
                            ProductRepository productRepository,
                            com.bazzar.repository.UserRepository userRepository,
-                           org.springframework.security.crypto.password.PasswordEncoder passwordEncoder,
-                           com.bazzar.repository.CartRepository cartRepository) {
+                           com.bazzar.repository.CartRepository cartRepository,
+                           org.springframework.jdbc.core.JdbcTemplate jdbcTemplate) {
         this.categoryRepository = categoryRepository;
         this.productRepository = productRepository;
         this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
         this.cartRepository = cartRepository;
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     @Override
     public void run(String... args) {
-        // Seed Admin user if not present
-        if (!userRepository.existsByEmail("admin@bazzar.com")) {
-            com.bazzar.entity.User admin = com.bazzar.entity.User.builder()
-                    .name("Store Admin")
-                    .email("admin@bazzar.com")
-                    .password(passwordEncoder.encode("admin123"))
-                    .role(com.bazzar.entity.Role.ROLE_ADMIN)
-                    .build();
-            admin = userRepository.save(admin);
-            cartRepository.save(com.bazzar.entity.Cart.builder().user(admin).build());
-            log.info("Admin user seeded: admin@bazzar.com / admin123");
+        // Ensure legacy PostgreSQL users table allows null password (now managed by Clerk)
+        // and update role check constraint for new role enum values
+        try {
+            jdbcTemplate.execute("ALTER TABLE IF EXISTS users ALTER COLUMN password DROP NOT NULL");
+            jdbcTemplate.execute("ALTER TABLE IF EXISTS users DROP CONSTRAINT IF EXISTS users_role_check");
+            jdbcTemplate.execute("ALTER TABLE IF EXISTS users ADD CONSTRAINT users_role_check CHECK (role IN ('ROLE_USER', 'ROLE_STORE_ADMIN', 'ROLE_SUPER_ADMIN', 'ROLE_ADMIN'))");
+        } catch (Exception e) {
+            log.warn("Could not update users table constraints: {}", e.getMessage());
         }
+
+        // Defensive column migrations for store_admin_applications & products
+        try {
+            jdbcTemplate.execute("ALTER TABLE IF EXISTS store_admin_applications ALTER COLUMN tax_id DROP NOT NULL");
+        } catch (Exception ignored) {}
+
+        try {
+            jdbcTemplate.execute("ALTER TABLE IF EXISTS store_admin_applications ADD COLUMN IF NOT EXISTS business_registration_type VARCHAR(255)");
+            jdbcTemplate.execute("ALTER TABLE IF EXISTS store_admin_applications ADD COLUMN IF NOT EXISTS pan_number VARCHAR(50)");
+            jdbcTemplate.execute("ALTER TABLE IF EXISTS store_admin_applications ADD COLUMN IF NOT EXISTS pickup_contact_name VARCHAR(255)");
+            jdbcTemplate.execute("ALTER TABLE IF EXISTS store_admin_applications ADD COLUMN IF NOT EXISTS pickup_contact_phone VARCHAR(50)");
+            jdbcTemplate.execute("ALTER TABLE IF EXISTS store_admin_applications ADD COLUMN IF NOT EXISTS pickup_address_line1 VARCHAR(255)");
+            jdbcTemplate.execute("ALTER TABLE IF EXISTS store_admin_applications ADD COLUMN IF NOT EXISTS pickup_address_line2 VARCHAR(255)");
+            jdbcTemplate.execute("ALTER TABLE IF EXISTS store_admin_applications ADD COLUMN IF NOT EXISTS pickup_city VARCHAR(100)");
+            jdbcTemplate.execute("ALTER TABLE IF EXISTS store_admin_applications ADD COLUMN IF NOT EXISTS pickup_state VARCHAR(100)");
+            jdbcTemplate.execute("ALTER TABLE IF EXISTS store_admin_applications ADD COLUMN IF NOT EXISTS pickup_postal_code VARCHAR(20)");
+            jdbcTemplate.execute("ALTER TABLE IF EXISTS store_admin_applications ADD COLUMN IF NOT EXISTS pickup_landmark VARCHAR(255)");
+            jdbcTemplate.execute("ALTER TABLE IF EXISTS store_admin_applications ADD COLUMN IF NOT EXISTS bank_account_holder_name VARCHAR(255)");
+            jdbcTemplate.execute("ALTER TABLE IF EXISTS store_admin_applications ADD COLUMN IF NOT EXISTS bank_name VARCHAR(255)");
+            jdbcTemplate.execute("ALTER TABLE IF EXISTS store_admin_applications ADD COLUMN IF NOT EXISTS bank_account_number VARCHAR(100)");
+            jdbcTemplate.execute("ALTER TABLE IF EXISTS store_admin_applications ADD COLUMN IF NOT EXISTS bank_ifsc_code VARCHAR(50)");
+        } catch (Exception e) {
+            log.warn("Could not alter store_admin_applications table: {}", e.getMessage());
+        }
+
+        try {
+            jdbcTemplate.execute("ALTER TABLE IF EXISTS products ADD COLUMN IF NOT EXISTS store_admin_id BIGINT");
+            jdbcTemplate.execute("ALTER TABLE IF EXISTS products ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'APPROVED'");
+            jdbcTemplate.execute("ALTER TABLE IF EXISTS products ADD COLUMN IF NOT EXISTS rejection_reason TEXT");
+            jdbcTemplate.execute("ALTER TABLE IF EXISTS products ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMP");
+        } catch (Exception e) {
+            log.warn("Could not alter products table: {}", e.getMessage());
+        }
+
+        // Ensure designated super admin emails always have ROLE_SUPER_ADMIN
+        List<String> superAdminEmails = List.of("tanmaymirgal26@gmail.com", "admin@bazzar.com");
+        for (String adminEmail : superAdminEmails) {
+            userRepository.findByEmail(adminEmail).ifPresent(u -> {
+                if (u.getRole() != com.bazzar.entity.Role.ROLE_SUPER_ADMIN) {
+                    u.setRole(com.bazzar.entity.Role.ROLE_SUPER_ADMIN);
+                    userRepository.save(u);
+                    log.info("Promoted {} to ROLE_SUPER_ADMIN in DataInitializer", adminEmail);
+                }
+            });
+        }
+
 
         log.info("Synchronizing categories and products with website specifications...");
 
@@ -126,6 +170,7 @@ public class DataInitializer implements CommandLineRunner {
                     p.setStock(s.stock);
                     p.setImage(s.image);
                     p.setCategory(category);
+                    p.setStatus(ProductStatus.APPROVED); // Seed data is auto-approved
                     productRepository.save(p);
                 } else {
                     saveProduct(s.name, s.description, s.price, s.stock, s.image, category);
@@ -238,6 +283,7 @@ public class DataInitializer implements CommandLineRunner {
                 .stock(stock)
                 .image(image)
                 .category(category)
+                .status(ProductStatus.APPROVED) // Seed/demo products are auto-approved
                 .build());
     }
 }

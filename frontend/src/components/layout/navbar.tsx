@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { ShoppingBag, Search, Menu, User, Heart, ShieldCheck, LogOut, ChevronRight, X, Loader2 } from 'lucide-react';
+import { ShoppingBag, Search, Menu, Heart, ShieldCheck, Store, ChevronRight, X, Loader2, Clock, AlertCircle, FileText, Package } from 'lucide-react';
 import { useCartStore } from '@/store/cart-store';
 import { useWishlistStore } from '@/store/wishlist-store';
 import { getProducts } from '@/lib/api/products';
@@ -11,7 +11,6 @@ import { Product } from '@/types/product';
 import { formatCurrency } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import {
   Sheet,
@@ -20,19 +19,22 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
-import { getCurrentUser, logout } from '@/lib/api/auth';
-import { User as UserType } from '@/types/user';
+import { useUser, UserButton, SignInButton } from '@clerk/nextjs';
+import { useApiAuth } from '@/lib/hooks/useApiAuth';
 
 export function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
+  const { user, isLoaded } = useUser();
+  const { getApiToken } = useApiAuth();
   const [searchQuery, setSearchQuery] = React.useState('');
   const [searchResults, setSearchResults] = React.useState<Product[]>([]);
   const [isSearching, setIsSearching] = React.useState(false);
   const [showSearchResults, setShowSearchResults] = React.useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const [mounted, setMounted] = React.useState(false);
-  const [currentUser, setCurrentUser] = React.useState<UserType | null>(null);
+  const [dbRole, setDbRole] = React.useState<string | null>(null);
+  const [appStatus, setAppStatus] = React.useState<'PENDING' | 'APPROVED' | 'REJECTED' | null>(null);
 
   const searchContainerRef = React.useRef<HTMLDivElement>(null);
 
@@ -43,8 +45,65 @@ export function Navbar() {
 
   React.useEffect(() => {
     setMounted(true);
-    setCurrentUser(getCurrentUser());
-  }, [pathname]);
+  }, []);
+
+  // Fetch real role from DB and application status so manual DB changes or approvals take effect immediately
+  React.useEffect(() => {
+    const fetchUserData = async () => {
+      if (!user) {
+        setDbRole(null);
+        setAppStatus(null);
+        return;
+      }
+      try {
+        const token = await getApiToken();
+        const headers = { Authorization: `Bearer ${token}` };
+
+        // 1. Fetch DB role
+        const meRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/me`, { headers });
+        if (meRes.ok) {
+          const profile = await meRes.json();
+          setDbRole(profile.role);
+        }
+
+        // 2. Fetch application status to track approval / rejection
+        const appRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/store-admin/application/status`, { headers });
+        if (appRes.ok) {
+          const appData = await appRes.json();
+          setAppStatus(appData.status);
+        } else {
+          setAppStatus(null);
+        }
+      } catch (e) {
+        console.error('Navbar user data fetch failed', e);
+      }
+    };
+
+    if (user) {
+      fetchUserData();
+    }
+  }, [user]);
+
+  // Combine DB role with Clerk fallback and super admin emails
+  const userEmails: string[] = [
+    user?.primaryEmailAddress?.emailAddress,
+    ...(user?.emailAddresses || []).map((e) => e.emailAddress),
+  ]
+    .filter(Boolean)
+    .map((e) => (e as string).toLowerCase());
+
+  const isSuperAdminEmail = userEmails.some(
+    (e) =>
+      e === 'tanmaymirgal26@gmail.com' ||
+      e === 'admin@bazzar.com'
+  );
+
+  const role = isSuperAdminEmail
+    ? 'ROLE_SUPER_ADMIN'
+    : (dbRole || (user?.publicMetadata as { role?: string })?.role || 'ROLE_USER');
+
+  const isSuperAdmin = role === 'ROLE_SUPER_ADMIN';
+  const isStoreAdmin = role === 'ROLE_STORE_ADMIN';
 
   // Live Autocomplete Debounced Fetch
   React.useEffect(() => {
@@ -84,12 +143,6 @@ export function Navbar() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleLogout = () => {
-    logout();
-    setCurrentUser(null);
-    toast.success('Signed out successfully');
-    router.push('/');
-  };
 
   const handleSearchSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -109,7 +162,62 @@ export function Navbar() {
     { href: '/products?category=Accessories', label: 'Accessories' },
   ];
 
-  const isAdmin = currentUser?.role === 'ROLE_ADMIN' || currentUser?.email === 'admin@bazzar.com';
+  const isAdmin = isSuperAdmin;
+
+  const renderUserButton = () => (
+    <UserButton
+      appearance={{
+        elements: {
+          avatarBox: 'h-9 w-9 ring-2 ring-[#111111]/10 hover:ring-[#3F46D8] transition-all',
+        },
+      }}
+    >
+      <UserButton.MenuItems>
+        {isSuperAdmin && (
+          <UserButton.Link
+            label="Super Admin Panel"
+            href="/super-admin"
+            labelIcon={<ShieldCheck className="h-4 w-4 text-[#3F46D8]" />}
+          />
+        )}
+        {isSuperAdmin && (
+          <UserButton.Link
+            label="Review Applications"
+            href="/super-admin/applications"
+            labelIcon={<FileText className="h-4 w-4 text-[#3F46D8]" />}
+          />
+        )}
+        {isStoreAdmin && (
+          <UserButton.Link
+            label="Seller Dashboard"
+            href="/store-admin"
+            labelIcon={<Store className="h-4 w-4 text-emerald-600" />}
+          />
+        )}
+        {isStoreAdmin && (
+          <UserButton.Link
+            label="My Products & Inventory"
+            href="/store-admin/products"
+            labelIcon={<Package className="h-4 w-4 text-emerald-600" />}
+          />
+        )}
+        {!isSuperAdmin && !isStoreAdmin && appStatus === 'PENDING' && (
+          <UserButton.Link
+            label="Track Seller Application"
+            href="/become-seller"
+            labelIcon={<Clock className="h-4 w-4 text-amber-500" />}
+          />
+        )}
+        {!isSuperAdmin && !isStoreAdmin && appStatus === 'REJECTED' && (
+          <UserButton.Link
+            label="Revise Application (Action Required)"
+            href="/become-seller"
+            labelIcon={<AlertCircle className="h-4 w-4 text-red-500" />}
+          />
+        )}
+      </UserButton.MenuItems>
+    </UserButton>
+  );
 
   return (
     <header className="sticky top-0 z-50 w-full bg-white border-b border-[#E8E8E8]">
@@ -149,16 +257,6 @@ export function Navbar() {
                   </Link>
                 );
               })}
-
-              {mounted && isAdmin && (
-                <Link
-                  href="/admin"
-                  className="text-indigo-600 font-bold hover:text-indigo-700 flex items-center gap-1"
-                >
-                  <ShieldCheck className="h-3.5 w-3.5" />
-                  Admin
-                </Link>
-              )}
             </nav>
           </div>
 
@@ -268,20 +366,19 @@ export function Navbar() {
               )}
             </Link>
 
-            {/* User State */}
-            {mounted && currentUser ? (
-              <div className="hidden sm:flex items-center gap-2 text-xs font-medium">
-                <span className="text-[#111111] font-bold">{currentUser.name}</span>
-                <button onClick={handleLogout} className="text-[#6B6B6B] hover:text-rose-600 p-1" title="Sign Out">
-                  <LogOut className="h-4 w-4" />
-                </button>
-              </div>
-            ) : (
-              <Link href="/login" className="hidden sm:block">
-                <Button size="sm" className="h-9 px-4 rounded-xl bg-[#111111] hover:bg-[#3F46D8] text-white text-xs font-semibold transition-colors shadow-xs">
-                  Sign In
-                </Button>
-              </Link>
+            {/* User State — Clerk */}
+            {mounted && isLoaded && (
+              user ? (
+                <div className="hidden sm:flex items-center">
+                  {renderUserButton()}
+                </div>
+              ) : (
+                <SignInButton mode="modal">
+                  <Button size="sm" className="hidden sm:flex h-9 px-4 rounded-xl bg-[#111111] hover:bg-[#3F46D8] text-white text-xs font-semibold transition-colors shadow-xs">
+                    Sign In
+                  </Button>
+                </SignInButton>
+              )
             )}
 
             {/* Mobile Drawer */}
@@ -324,30 +421,21 @@ export function Navbar() {
                           <ChevronRight className="h-4 w-4 text-[#6B6B6B]" />
                         </Link>
                       ))}
-
-                      {mounted && isAdmin && (
-                        <Link
-                          href="/admin"
-                          onClick={() => setIsMobileMenuOpen(false)}
-                          className="text-xs font-bold py-3 border-b border-[#E8E8E8] text-indigo-600 flex items-center justify-between"
-                        >
-                          <span className="flex items-center gap-1.5"><ShieldCheck className="h-4 w-4" /> Admin Console</span>
-                          <ChevronRight className="h-4 w-4 text-indigo-600" />
-                        </Link>
-                      )}
                     </div>
 
                     <div className="pt-4 flex flex-col gap-2">
-                      {mounted && currentUser ? (
-                        <Button onClick={handleLogout} variant="outline" className="w-full rounded-xl h-10 border-[#E8E8E8] text-xs font-semibold">
-                          Sign Out ({currentUser.name})
-                        </Button>
-                      ) : (
-                        <Link href="/login" onClick={() => setIsMobileMenuOpen(false)}>
-                          <Button className="w-full rounded-xl h-10 bg-[#111111] text-white text-xs font-semibold">
-                            Sign In / Create Account
-                          </Button>
-                        </Link>
+                      {mounted && isLoaded && (
+                        user ? (
+                          <div className="flex justify-center pt-2">
+                            {renderUserButton()}
+                          </div>
+                        ) : (
+                          <SignInButton mode="modal">
+                            <Button className="w-full rounded-xl h-10 bg-[#111111] text-white text-xs font-semibold">
+                              Sign In / Create Account
+                            </Button>
+                          </SignInButton>
+                        )
                       )}
                     </div>
                   </div>

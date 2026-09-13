@@ -69,12 +69,7 @@ export default function AdminDashboardPage() {
   const [isUpdatingProduct, setIsUpdatingProduct] = React.useState(false);
 
   React.useEffect(() => {
-    setMounted(true);
-    const user = getCurrentUser();
-    if (!user || (user.role !== 'ROLE_ADMIN' && user.email !== 'admin@bazzar.com')) {
-      toast.error('Access Denied. Admin credentials required.');
-      router.push('/login');
-    }
+    router.replace('/super-admin');
   }, [router]);
 
   const fetchRealDatabaseData = async () => {

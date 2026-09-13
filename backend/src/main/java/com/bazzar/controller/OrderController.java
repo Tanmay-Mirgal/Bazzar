@@ -1,5 +1,6 @@
 package com.bazzar.controller;
 
+import com.bazzar.config.ClerkUserResolver;
 import com.bazzar.dto.request.OrderRequest;
 import com.bazzar.dto.response.OrderResponse;
 import com.bazzar.entity.User;
@@ -8,6 +9,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,21 +19,25 @@ import java.util.List;
 public class OrderController {
 
     private final OrderService orderService;
+    private final ClerkUserResolver clerkUserResolver;
 
-    public OrderController(OrderService orderService) {
+    public OrderController(OrderService orderService, ClerkUserResolver clerkUserResolver) {
         this.orderService = orderService;
+        this.clerkUserResolver = clerkUserResolver;
     }
 
     @PostMapping
     public ResponseEntity<OrderResponse> placeOrder(
-            @AuthenticationPrincipal User user,
+            @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody OrderRequest request) {
+        User user = clerkUserResolver.resolveOrThrow(jwt);
         OrderResponse response = orderService.placeOrder(user, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @GetMapping
-    public ResponseEntity<List<OrderResponse>> getUserOrders(@AuthenticationPrincipal User user) {
+    public ResponseEntity<List<OrderResponse>> getUserOrders(@AuthenticationPrincipal Jwt jwt) {
+        User user = clerkUserResolver.resolveOrThrow(jwt);
         return ResponseEntity.ok(orderService.getUserOrders(user));
     }
 
@@ -42,8 +48,9 @@ public class OrderController {
 
     @GetMapping("/{id}")
     public ResponseEntity<OrderResponse> getUserOrderById(
-            @AuthenticationPrincipal User user,
+            @AuthenticationPrincipal Jwt jwt,
             @PathVariable Long id) {
+        User user = clerkUserResolver.resolveOrThrow(jwt);
         return ResponseEntity.ok(orderService.getUserOrderById(user, id));
     }
 }

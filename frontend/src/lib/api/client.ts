@@ -10,12 +10,8 @@ export async function apiFetch<T>(
 ): Promise<T> {
   const url = `${API_BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
 
-  // Auto-attach auth token if available (client-side only)
-  const token = typeof window !== 'undefined' ? localStorage.getItem('bazzar_token') : null;
-
   const defaultHeaders: HeadersInit = {
     'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 
   const config: RequestInit = {
@@ -41,13 +37,10 @@ export async function apiFetchNoBody(
   options: RequestInit = {}
 ): Promise<void> {
   const url = `${API_BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
-  const token = typeof window !== 'undefined' ? localStorage.getItem('bazzar_token') : null;
-
   const config: RequestInit = {
     ...options,
     headers: {
       'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options.headers,
     },
   };

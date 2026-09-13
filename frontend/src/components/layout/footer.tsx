@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { ArrowRight, Lock, Truck, RefreshCw } from 'lucide-react';
+import { ArrowRight, Lock, Truck, RefreshCw, Store } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
@@ -51,6 +51,30 @@ export function Footer() {
               </Button>
             </form>
           </div>
+        </div>
+      </div>
+
+      {/* Become a Seller Banner for Normal Users */}
+      <div className="border-b border-[#262626] bg-[#171717] py-8 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-[1440px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-6">
+          <div className="flex items-center gap-4 text-center sm:text-left">
+            <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
+              <Store className="h-6 w-6 text-emerald-400" />
+            </div>
+            <div>
+              <h4 className="text-sm sm:text-base font-extrabold text-white">Sell on Bazzar Marketplace</h4>
+              <p className="text-xs text-[#A3A3A3] mt-0.5">
+                Join our verified seller network. Register your courier pickup hub and reach buyers nationwide.
+              </p>
+            </div>
+          </div>
+          <Link href="/become-seller">
+            <Button className="h-10 px-6 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs tracking-wide shadow-md hover:shadow-emerald-900/40 transition-all flex items-center gap-2 shrink-0">
+              <Store className="h-4 w-4" />
+              <span>Become a Seller</span>
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Button>
+          </Link>
         </div>
       </div>
 
@@ -132,8 +156,13 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/login" className="hover:text-white transition-colors">
+                <Link href="/sign-in" className="hover:text-white transition-colors">
                   Sign In / Register
+                </Link>
+              </li>
+              <li>
+                <Link href="/become-seller" className="hover:text-white transition-colors text-emerald-400 font-semibold">
+                  Become a Seller
                 </Link>
               </li>
             </ul>

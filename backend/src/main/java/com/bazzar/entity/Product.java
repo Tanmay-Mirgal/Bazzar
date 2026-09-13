@@ -36,11 +36,36 @@ public class Product {
     @JoinColumn(name = "category_id", nullable = false)
     private Category category;
 
+    /** The store admin who submitted this product. Null for super-admin-created products. */
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "store_admin_id")
+    private User storeAdmin;
+
+    /**
+     * Approval status — only APPROVED products appear on the public listing.
+     * Products submitted by store_admin start as PENDING.
+     * Products created directly by super_admin are auto-APPROVED.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private ProductStatus status = ProductStatus.PENDING;
+
+    /** Reason provided by super_admin when rejecting a product. */
+    @Column(name = "rejection_reason", columnDefinition = "TEXT")
+    private String rejectionReason;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    @Column(name = "reviewed_at")
+    private LocalDateTime reviewedAt;
 
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
+        if (this.status == null) {
+            this.status = ProductStatus.PENDING;
+        }
     }
 }

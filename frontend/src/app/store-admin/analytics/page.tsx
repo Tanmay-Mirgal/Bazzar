@@ -186,7 +186,7 @@ export default function StoreAdminAnalyticsPage() {
               <DollarSign className="h-5 w-5" />
             </div>
             <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-              <ArrowUpRight className="h-3 w-3" /> +18.4%
+              {(data?.totalRevenue ?? 0) > 0 ? 'Active Sales' : 'Live Sync'}
             </span>
           </div>
           <div>
@@ -413,20 +413,28 @@ export default function StoreAdminAnalyticsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#F0F0F0] text-xs">
-                {data?.payoutHistory?.map((pay) => (
-                  <tr key={pay.payoutId} className="hover:bg-gray-50/50">
-                    <td className="py-3 px-4 font-bold text-[#111111]">{pay.payoutId}</td>
-                    <td className="py-3 px-4 text-[#6B6B6B]">{pay.date}</td>
-                    <td className="py-3 px-4 font-medium text-[#111111]">{pay.bankName}</td>
-                    <td className="py-3 px-4 text-[#6B6B6B] font-mono text-[11px]">{pay.referenceNumber}</td>
-                    <td className="py-3 px-4 font-black text-emerald-600">₹{pay.amount.toLocaleString('en-IN')}</td>
-                    <td className="py-3 px-4 text-right">
-                      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-                        <CheckCircle2 className="h-3 w-3" /> {pay.status}
-                      </span>
+                {data?.payoutHistory && data.payoutHistory.length > 0 ? (
+                  data.payoutHistory.map((pay) => (
+                    <tr key={pay.payoutId} className="hover:bg-gray-50/50">
+                      <td className="py-3 px-4 font-bold text-[#111111]">{pay.payoutId}</td>
+                      <td className="py-3 px-4 text-[#6B6B6B]">{pay.date}</td>
+                      <td className="py-3 px-4 font-medium text-[#111111]">{pay.bankName}</td>
+                      <td className="py-3 px-4 text-[#6B6B6B] font-mono text-[11px]">{pay.referenceNumber}</td>
+                      <td className="py-3 px-4 font-black text-emerald-600">₹{pay.amount.toLocaleString('en-IN')}</td>
+                      <td className="py-3 px-4 text-right">
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                          <CheckCircle2 className="h-3 w-3" /> {pay.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center text-xs text-[#888888]">
+                      No settlement payouts processed yet. Settlements are generated every Monday once customer orders are delivered.
                     </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>

@@ -68,42 +68,84 @@ export default function StoreAdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Restore SWR cache for instant load
+  useEffect(() => {
+    try {
+      const cached = sessionStorage.getItem('seller_dashboard_cache');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed.stats) setStats(parsed.stats);
+        if (parsed.products) setRecentProducts(parsed.products);
+        if (parsed.orders) setRecentOrders(parsed.orders);
+        setLoading(false);
+      }
+    } catch {}
+  }, []);
+
   const fetchData = useCallback(async (manual = false) => {
     if (manual) setRefreshing(true);
-    else setLoading(true);
+    else if (!stats && recentProducts.length === 0) setLoading(true);
 
     try {
       let token = await getApiToken();
       if (!token) {
-        await new Promise((r) => setTimeout(r, 300));
+        await new Promise((r) => setTimeout(r, 400));
         token = await getApiToken();
       }
 
       const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
       const base = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-      const [statsRes, productsRes, ordersRes] = await Promise.all([
-        fetch(`${base}/store-admin/dashboard/stats`, { headers, signal: AbortSignal.timeout(8000) }),
-        fetch(`${base}/store-admin/products`, { headers, signal: AbortSignal.timeout(8000) }),
-        fetch(`${base}/store-admin/orders`, { headers, signal: AbortSignal.timeout(8000) }),
+      let fetchedStats: Stats | null = null;
+      let fetchedProducts: Product[] = [];
+      let fetchedOrders: Order[] = [];
+
+      // Fetch in parallel with generous timeout
+      await Promise.allSettled([
+        fetch(`${base}/store-admin/dashboard/stats`, { headers, signal: AbortSignal.timeout(15000) })
+          .then(async (r) => {
+            if (r.ok) {
+              fetchedStats = await r.json();
+              setStats(fetchedStats);
+            }
+          })
+          .catch((e) => console.error('Stats fetch failed:', e)),
+
+        fetch(`${base}/store-admin/products`, { headers, signal: AbortSignal.timeout(15000) })
+          .then(async (r) => {
+            if (r.ok) {
+              const data = await r.json();
+              fetchedProducts = data.slice(0, 5);
+              setRecentProducts(fetchedProducts);
+            }
+          })
+          .catch((e) => console.error('Products fetch failed:', e)),
+
+        fetch(`${base}/store-admin/orders`, { headers, signal: AbortSignal.timeout(15000) })
+          .then(async (r) => {
+            if (r.ok) {
+              const ordersData = await r.json();
+              fetchedOrders = ordersData.slice(0, 4);
+              setRecentOrders(fetchedOrders);
+            }
+          })
+          .catch((e) => console.error('Orders fetch failed:', e)),
       ]);
 
-      if (statsRes.ok) setStats(await statsRes.json());
-      if (productsRes.ok) {
-        const data = await productsRes.json();
-        setRecentProducts(data.slice(0, 5));
-      }
-      if (ordersRes.ok) {
-        const ordersData = await ordersRes.json();
-        setRecentOrders(ordersData.slice(0, 4));
-      }
+      try {
+        sessionStorage.setItem('seller_dashboard_cache', JSON.stringify({
+          stats: fetchedStats || stats,
+          products: fetchedProducts.length > 0 ? fetchedProducts : recentProducts,
+          orders: fetchedOrders.length > 0 ? fetchedOrders : recentOrders,
+        }));
+      } catch {}
     } catch (err) {
       console.error('Failed to fetch dashboard data:', err);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [getApiToken]);
+  }, [getApiToken, stats, recentProducts, recentOrders]);
 
   useEffect(() => {
     if (userLoaded) {
@@ -115,19 +157,28 @@ export default function StoreAdminDashboard() {
     }
   }, [userLoaded, user, fetchData]);
 
+  // Real data calculations
+  const totalRevenue = stats?.myTotalRevenue ?? 0;
+  const netEarnings = Math.round(totalRevenue * 0.95);
+  const totalOrdersCount = stats?.myTotalOrders ?? recentOrders.length;
+  const totalCatalogCount = stats?.myProducts ?? recentProducts.length;
+  const approvedCount = stats?.myApprovedProducts ?? recentProducts.filter(p => p.status === 'APPROVED').length;
+  const pendingCount = stats?.myPendingProducts ?? recentProducts.filter(p => p.status === 'PENDING').length;
+  const pendingPayout = stats?.myPendingPayout ?? netEarnings;
+
   const statCards = [
     {
       label: 'Gross Sales Revenue',
-      value: `₹${((stats?.myTotalRevenue ?? 0) > 0 ? stats!.myTotalRevenue! : 28450).toLocaleString('en-IN')}`,
+      value: `₹${totalRevenue.toLocaleString('en-IN')}`,
       subtext: '5% platform commission',
       icon: DollarSign,
       color: 'bg-emerald-50 text-emerald-600',
-      badge: '+18.4%',
+      badge: totalRevenue > 0 ? 'Active Sales' : 'Real-time Sync',
       href: '/store-admin/analytics',
     },
     {
       label: 'Net Seller Earnings',
-      value: `₹${(Math.round(((stats?.myTotalRevenue ?? 0) > 0 ? stats!.myTotalRevenue! : 28450) * 0.95)).toLocaleString('en-IN')}`,
+      value: `₹${netEarnings.toLocaleString('en-IN')}`,
       subtext: 'Your take-home profit',
       icon: CreditCard,
       color: 'bg-indigo-50 text-indigo-600',
@@ -136,18 +187,20 @@ export default function StoreAdminDashboard() {
     },
     {
       label: 'Customer Orders',
-      value: (stats?.myTotalOrders && stats.myTotalOrders > 0) ? stats.myTotalOrders : recentOrders.length,
+      value: totalOrdersCount,
       subtext: 'Total orders placed',
       icon: ShoppingBag,
       color: 'bg-purple-50 text-purple-600',
+      badge: totalOrdersCount > 0 ? `${totalOrdersCount} placed` : undefined,
       href: '/store-admin/orders',
     },
     {
       label: 'Catalog Listings',
-      value: stats?.myProducts ?? 0,
-      subtext: `${stats?.myApprovedProducts ?? 0} Live · ${stats?.myPendingProducts ?? 0} In Review`,
+      value: totalCatalogCount,
+      subtext: `${approvedCount} Live · ${pendingCount} In Review`,
       icon: Package,
       color: 'bg-blue-50 text-blue-600',
+      badge: pendingCount > 0 ? `${pendingCount} Under Review` : undefined,
       href: '/store-admin/products',
     },
   ];
@@ -183,7 +236,7 @@ export default function StoreAdminDashboard() {
             Welcome back, {user?.firstName ?? 'Seller'} 👋
           </h1>
           <p className="text-sm text-[#6B6B6B] mt-0.5">
-            Here's the latest performance update on your store sales, fulfillment, and revenue.
+            Here's the latest real-time performance update on your store sales, fulfillment, and revenue.
           </p>
         </div>
 
@@ -217,14 +270,18 @@ export default function StoreAdminDashboard() {
                   <Icon className="h-5 w-5" />
                 </div>
                 {badge && (
-                  <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full flex items-center gap-1">
-                    <ArrowUpRight className="h-3 w-3" /> {badge}
+                  <span className="text-[11px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full flex items-center gap-1">
+                    {badge}
                   </span>
                 )}
               </div>
               <div>
                 <p className="text-2xl font-black text-[#111111] group-hover:text-[#3F46D8] transition-colors">
-                  {loading ? <span className="h-6 w-16 bg-gray-100 animate-pulse rounded block" /> : value}
+                  {loading && !stats && recentProducts.length === 0 ? (
+                    <span className="h-6 w-16 bg-gray-100 animate-pulse rounded block" />
+                  ) : (
+                    value
+                  )}
                 </p>
                 <p className="text-xs font-bold text-[#111111] mt-0.5">{label}</p>
                 <p className="text-[11px] text-[#888888]">{subtext}</p>
@@ -251,7 +308,7 @@ export default function StoreAdminDashboard() {
           <div className="text-right">
             <p className="text-xs text-indigo-200">Cleared Balance</p>
             <p className="text-2xl font-black text-emerald-300">
-              ₹{(Math.round(((stats?.myTotalRevenue ?? 0) > 0 ? stats!.myTotalRevenue! : 28450) * 0.85)).toLocaleString('en-IN')}
+              ₹{pendingPayout.toLocaleString('en-IN')}
             </p>
           </div>
           <Link href="/store-admin/analytics">
@@ -350,7 +407,7 @@ export default function StoreAdminDashboard() {
                 </div>
               ))
             ) : (
-              <div className="py-12 text-center text-xs text-[#888888]">No orders received yet.</div>
+              <div className="py-12 text-center text-xs text-[#888888]">No customer orders received yet.</div>
             )}
           </div>
         </div>

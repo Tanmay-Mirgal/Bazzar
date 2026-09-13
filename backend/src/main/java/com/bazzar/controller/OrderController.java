@@ -3,6 +3,7 @@ package com.bazzar.controller;
 import com.bazzar.config.ClerkUserResolver;
 import com.bazzar.dto.request.OrderRequest;
 import com.bazzar.dto.response.OrderResponse;
+import com.bazzar.dto.response.OrderTrackingResponse;
 import com.bazzar.entity.User;
 import com.bazzar.service.OrderService;
 import jakarta.validation.Valid;
@@ -52,5 +53,13 @@ public class OrderController {
             @PathVariable Long id) {
         User user = clerkUserResolver.resolveOrThrow(jwt);
         return ResponseEntity.ok(orderService.getUserOrderById(user, id));
+    }
+
+    @GetMapping("/{id}/tracking")
+    public ResponseEntity<OrderTrackingResponse> getOrderTracking(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable Long id) {
+        User user = clerkUserResolver.resolveOrThrow(jwt);
+        return ResponseEntity.ok(orderService.getOrderTracking(user, id));
     }
 }

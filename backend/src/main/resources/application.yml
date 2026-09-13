@@ -66,6 +66,16 @@ cloudinary:
   api-key: ${CLOUDINARY_API_KEY:}
   api-secret: ${CLOUDINARY_API_SECRET:}
 
+# Razorpay configuration
+razorpay:
+  key-id: ${RAZORPAY_KEY_ID:rzp_test_placeholder}
+  key-secret: ${RAZORPAY_KEY_SECRET:rzp_secret_placeholder}
+
+# Shiprocket configuration
+shiprocket:
+  email: ${SHIPROCKET_EMAIL:}
+  password: ${SHIPROCKET_PASSWORD:}
+
 logging:
   level:
     com.bazzar: INFO

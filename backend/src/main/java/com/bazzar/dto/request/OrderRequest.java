@@ -3,6 +3,7 @@ package com.bazzar.dto.request;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
+import java.util.List;
 
 @Data
 public class OrderRequest {
@@ -25,4 +26,15 @@ public class OrderRequest {
 
     @NotBlank(message = "Postal code is required")
     private String postalCode;
+
+    private String paymentMethod; // "RAZORPAY", "COD"
+
+    private List<OrderItemPayload> items;
+
+    @Data
+    public static class OrderItemPayload {
+        private Long productId;
+        private Integer quantity;
+    }
 }
+

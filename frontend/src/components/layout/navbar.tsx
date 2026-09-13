@@ -173,6 +173,11 @@ export function Navbar() {
       }}
     >
       <UserButton.MenuItems>
+        <UserButton.Link
+          label="My Orders & Tracking"
+          href="/orders"
+          labelIcon={<ShoppingBag className="h-4 w-4 text-[#3F46D8]" />}
+        />
         {isSuperAdmin && (
           <UserButton.Link
             label="Super Admin Panel"

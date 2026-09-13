@@ -470,6 +470,218 @@ public class EmailService {
         sendEmail(recipient, subject, html);
     }
 
+    /**
+     * Sends an email to the customer when their order is placed.
+     */
+    @Async
+    public void sendOrderPlacedEmail(com.bazzar.entity.Order order) {
+        String recipient = order.getEmail();
+        String subject = "🎉 Order Placed Successfully! #" + order.getId() + " | Bazzar Marketplace";
+
+        StringBuilder itemsHtml = new StringBuilder();
+        for (com.bazzar.entity.OrderItem item : order.getItems()) {
+            itemsHtml.append("""
+                <div class="detail-row" style="padding: 10px 0;">
+                  <span class="detail-label" style="color: #111111; font-weight: 600;">%s <span style="color: #6b7280; font-weight: 400;">(x%d)</span></span>
+                  <span class="detail-value">₹%s</span>
+                </div>
+            """.formatted(
+                    item.getProduct().getName(),
+                    item.getQuantity(),
+                    item.getPrice().multiply(java.math.BigDecimal.valueOf(item.getQuantity())).toString()
+            ));
+        }
+
+        String trackingUrl = "http://localhost:3000/orders/" + order.getId();
+        String paymentBadge = "COD".equalsIgnoreCase(order.getPaymentMethod())
+                ? "<span style=\"background: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 6px; font-weight: 700; font-size: 11px;\">Cash on Delivery</span>"
+                : "<span style=\"background: #d1fae5; color: #065f46; padding: 2px 8px; border-radius: 6px; font-weight: 700; font-size: 11px;\">Razorpay Paid</span>";
+
+        String html = """
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <meta charset="utf-8">
+              <style>
+                body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f7f7f5; margin: 0; padding: 24px; color: #111111; }
+                .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 20px; overflow: hidden; border: 1px solid #e8e8e8; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
+                .header { background: #111111; padding: 28px 32px; text-align: center; }
+                .brand { font-size: 24px; font-weight: 900; letter-spacing: -0.5px; color: #ffffff; margin: 0; }
+                .brand span { color: #3f46d8; }
+                .content { padding: 36px 32px; }
+                .badge { display: inline-block; background: #d1fae5; color: #065f46; font-size: 11px; font-weight: 700; text-transform: uppercase; padding: 4px 12px; border-radius: 9999px; letter-spacing: 0.5px; margin-bottom: 16px; border: 1px solid #a7f3d0; }
+                h1 { font-size: 22px; font-weight: 800; margin: 0 0 12px; color: #111111; }
+                p { font-size: 14px; line-height: 1.6; color: #4b5563; margin: 0 0 16px; }
+                .card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 14px; padding: 20px; margin: 24px 0; }
+                .card-title { font-size: 13px; font-weight: 700; text-transform: uppercase; color: #6b7280; letter-spacing: 0.5px; margin-bottom: 12px; }
+                .detail-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f3f4f6; font-size: 13px; }
+                .detail-row:last-child { border-bottom: none; }
+                .detail-label { color: #6b7280; font-weight: 500; }
+                .detail-value { color: #111111; font-weight: 600; text-align: right; }
+                .total-row { display: flex; justify-content: space-between; padding: 12px 0 0; border-top: 2px solid #e5e7eb; margin-top: 8px; font-size: 16px; font-weight: 800; color: #3f46d8; }
+                .cta-btn { display: block; text-align: center; background: #3f46d8; color: #ffffff !important; text-decoration: none; padding: 14px 28px; border-radius: 12px; font-weight: 700; font-size: 14px; margin: 28px 0; }
+                .footer { background: #f9fafb; border-top: 1px solid #e5e7eb; padding: 20px 32px; text-align: center; font-size: 12px; color: #9ca3af; }
+              </style>
+            </head>
+            <body>
+              <div class="container">
+                <div class="header">
+                  <h2 class="brand">BAZ<span>ZAR</span></h2>
+                </div>
+                <div class="content">
+                  <div class="badge">Order Confirmed</div>
+                  <h1>Thank you for your order, %s!</h1>
+                  <p>Your order <strong>#%d</strong> has been confirmed. Our seller is preparing your package for courier pickup and dispatch.</p>
+                  
+                  <div class="card">
+                    <div class="card-title">Order Summary (#%d)</div>
+                    %s
+                    <div class="total-row">
+                      <span>Total Amount:</span>
+                      <span>₹%s</span>
+                    </div>
+                  </div>
+
+                  <div class="card">
+                    <div class="card-title">Delivery &amp; Payment</div>
+                    <div class="detail-row"><span class="detail-label">Recipient:</span><span class="detail-value">%s (%s)</span></div>
+                    <div class="detail-row"><span class="detail-label">Delivery Address:</span><span class="detail-value">%s, %s - %s</span></div>
+                    <div class="detail-row"><span class="detail-label">Payment Method:</span><span class="detail-value">%s</span></div>
+                  </div>
+
+                  <p>You can track the live location of your parcel from pickup warehouse to your doorstep anytime using our interactive tracking map:</p>
+
+                  <a href="%s" class="cta-btn">Track Your Order Live &rarr;</a>
+                </div>
+                <div class="footer">
+                  &copy; Bazzar Marketplace. Sent to %s.
+                </div>
+              </div>
+            </body>
+            </html>
+            """.formatted(
+                order.getFullName(),
+                order.getId(),
+                order.getId(),
+                itemsHtml.toString(),
+                order.getTotalAmount().toString(),
+                order.getFullName(),
+                order.getPhoneNumber(),
+                order.getAddress(),
+                order.getCity(),
+                order.getPostalCode(),
+                paymentBadge,
+                trackingUrl,
+                recipient
+        );
+
+        sendEmail(recipient, subject, html);
+    }
+
+    /**
+     * Sends an email to the customer when the order status changes (Shipped / Out for Delivery / Delivered).
+     */
+    @Async
+    public void sendOrderStatusUpdateEmail(com.bazzar.entity.Order order, String newStatus) {
+        String recipient = order.getEmail();
+        String displayStatus = newStatus;
+        String badgeColor = "#d1fae5";
+        String textColor = "#065f46";
+        String statusMessage = "Your order status has been updated.";
+
+        if ("SHIPPED".equalsIgnoreCase(newStatus)) {
+            displayStatus = "Shipped & In-Transit 🚚";
+            badgeColor = "#fef3c7";
+            textColor = "#92400e";
+            statusMessage = "Your parcel has been picked up from the seller warehouse and is on its way to your city.";
+        } else if ("DELIVERED".equalsIgnoreCase(newStatus)) {
+            displayStatus = "Delivered 🎉";
+            badgeColor = "#d1fae5";
+            textColor = "#065f46";
+            statusMessage = "Your package has been safely delivered to your doorstep! We hope you love your purchase.";
+        } else if ("CONFIRMED".equalsIgnoreCase(newStatus)) {
+            displayStatus = "Confirmed & Manifested 📦";
+            badgeColor = "#e0e7ff";
+            textColor = "#3730a3";
+            statusMessage = "The seller has confirmed your order and scheduled Shiprocket courier pickup.";
+        }
+
+        String subject = "🚚 Order #" + order.getId() + " Update: " + displayStatus + " | Bazzar";
+        String trackingUrl = "http://localhost:3000/orders/" + order.getId();
+
+        String awbSection = (order.getAwbCode() != null && !order.getAwbCode().isBlank())
+                ? "<div class=\"detail-row\"><span class=\"detail-label\">Shiprocket AWB:</span><span class=\"detail-value\" style=\"font-family: monospace;\">" + order.getAwbCode() + " (" + (order.getCourierName() != null ? order.getCourierName() : "Express") + ")</span></div>"
+                : "";
+
+        String html = """
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <meta charset="utf-8">
+              <style>
+                body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f7f7f5; margin: 0; padding: 24px; color: #111111; }
+                .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 20px; overflow: hidden; border: 1px solid #e8e8e8; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
+                .header { background: #111111; padding: 28px 32px; text-align: center; }
+                .brand { font-size: 24px; font-weight: 900; letter-spacing: -0.5px; color: #ffffff; margin: 0; }
+                .brand span { color: #3f46d8; }
+                .content { padding: 36px 32px; }
+                .badge { display: inline-block; background: %s; color: %s; font-size: 11px; font-weight: 700; text-transform: uppercase; padding: 4px 12px; border-radius: 9999px; letter-spacing: 0.5px; margin-bottom: 16px; }
+                h1 { font-size: 22px; font-weight: 800; margin: 0 0 12px; color: #111111; }
+                p { font-size: 14px; line-height: 1.6; color: #4b5563; margin: 0 0 16px; }
+                .card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 14px; padding: 20px; margin: 24px 0; }
+                .card-title { font-size: 13px; font-weight: 700; text-transform: uppercase; color: #6b7280; letter-spacing: 0.5px; margin-bottom: 12px; }
+                .detail-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f3f4f6; font-size: 13px; }
+                .detail-row:last-child { border-bottom: none; }
+                .detail-label { color: #6b7280; font-weight: 500; }
+                .detail-value { color: #111111; font-weight: 600; text-align: right; }
+                .cta-btn { display: block; text-align: center; background: #3f46d8; color: #ffffff !important; text-decoration: none; padding: 14px 28px; border-radius: 12px; font-weight: 700; font-size: 14px; margin: 28px 0; }
+                .footer { background: #f9fafb; border-top: 1px solid #e5e7eb; padding: 20px 32px; text-align: center; font-size: 12px; color: #9ca3af; }
+              </style>
+            </head>
+            <body>
+              <div class="container">
+                <div class="header">
+                  <h2 class="brand">BAZ<span>ZAR</span></h2>
+                </div>
+                <div class="content">
+                  <div class="badge">%s</div>
+                  <h1>Hello %s,</h1>
+                  <p>%s</p>
+                  
+                  <div class="card">
+                    <div class="card-title">Live Tracking Details</div>
+                    <div class="detail-row"><span class="detail-label">Order Number:</span><span class="detail-value">#%d</span></div>
+                    <div class="detail-row"><span class="detail-label">Current Status:</span><span class="detail-value">%s</span></div>
+                    %s
+                    <div class="detail-row"><span class="detail-label">Delivery Destination:</span><span class="detail-value">%s, %s</span></div>
+                  </div>
+
+                  <a href="%s" class="cta-btn">View Interactive Tracking Map &rarr;</a>
+                </div>
+                <div class="footer">
+                  &copy; Bazzar Marketplace. Sent to %s.
+                </div>
+              </div>
+            </body>
+            </html>
+            """.formatted(
+                badgeColor,
+                textColor,
+                displayStatus,
+                order.getFullName(),
+                statusMessage,
+                order.getId(),
+                displayStatus,
+                awbSection,
+                order.getCity(),
+                order.getPostalCode(),
+                trackingUrl,
+                recipient
+        );
+
+        sendEmail(recipient, subject, html);
+    }
+
     private void sendEmail(String toEmail, String subject, String htmlContent) {
         if (mailSender == null) {
             log.warn("JavaMailSender is not initialized. Skipping email to: {}", toEmail);

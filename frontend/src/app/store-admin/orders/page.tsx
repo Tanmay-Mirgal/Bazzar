@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import { useUser } from '@clerk/nextjs';
 import { useApiAuth } from '@/lib/hooks/useApiAuth';
 import {
@@ -19,6 +20,12 @@ import {
   ChevronDown,
   RefreshCw,
   Sparkles,
+  CreditCard,
+  Navigation,
+  ExternalLink,
+  ShieldCheck,
+  Zap,
+  Building,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -47,6 +54,24 @@ interface Order {
   postalCode: string;
   items: OrderItem[];
   createdAt: string;
+
+  // Payment
+  paymentMethod?: string;
+  paymentStatus?: string;
+  paymentId?: string;
+  razorpayOrderId?: string;
+
+  // Shiprocket Logistics
+  shipmentId?: string;
+  awbCode?: string;
+  courierName?: string;
+  trackingStatus?: string;
+
+  // Pickup details
+  pickupAddress?: string;
+  pickupCity?: string;
+  pickupState?: string;
+  pickupPostalCode?: string;
 }
 
 const STATUS_CONFIG: Record<string, { label: string; icon: any; badge: string; border: string }> = {
@@ -57,7 +82,7 @@ const STATUS_CONFIG: Record<string, { label: string; icon: any; badge: string; b
     border: 'border-l-blue-500',
   },
   CONFIRMED: {
-    label: 'Confirmed',
+    label: 'Confirmed (Manifested)',
     icon: CheckCircle2,
     badge: 'bg-purple-50 text-purple-700 border-purple-200',
     border: 'border-l-purple-500',
@@ -148,7 +173,7 @@ export default function StoreAdminOrdersPage() {
       if (res.ok) {
         const updated = await res.json();
         setOrders((prev) => prev.map((o) => (o.id === orderId ? updated : o)));
-        toast.success(`Order #${orderId} marked as ${nextStatus}!`);
+        toast.success(`Order #${orderId} updated to ${nextStatus}! Shiprocket dispatch updated & email sent.`);
       } else {
         toast.error('Failed to update status');
       }
@@ -165,7 +190,8 @@ export default function StoreAdminOrdersPage() {
       search === '' ||
       o.id.toString().includes(search) ||
       o.fullName.toLowerCase().includes(search.toLowerCase()) ||
-      o.city.toLowerCase().includes(search.toLowerCase());
+      o.city.toLowerCase().includes(search.toLowerCase()) ||
+      (o.awbCode && o.awbCode.toLowerCase().includes(search.toLowerCase()));
     return matchStatus && matchSearch;
   });
 
@@ -176,12 +202,12 @@ export default function StoreAdminOrdersPage() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="text-xs font-bold text-[#3F46D8] uppercase tracking-widest flex items-center gap-1.5">
-              <ShoppingBag className="h-3.5 w-3.5" /> Order Fulfillment
+              <ShoppingBag className="h-3.5 w-3.5" /> Seller Order Fulfillment
             </span>
           </div>
-          <h1 className="text-2xl font-extrabold text-[#111111]">Customer Orders</h1>
+          <h1 className="text-2xl font-extrabold text-[#111111]">Incoming Store Orders</h1>
           <p className="text-sm text-[#6B6B6B] mt-0.5">
-            Process incoming orders, update dispatch statuses, and track deliveries.
+            Confirm customer orders, generate Shiprocket courier consignments, and monitor delivery routes.
           </p>
         </div>
 
@@ -221,11 +247,11 @@ export default function StoreAdminOrdersPage() {
         </div>
 
         {/* Search */}
-        <div className="relative min-w-[240px]">
+        <div className="relative min-w-[260px]">
           <Search className="h-4 w-4 text-[#AAAAAA] absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            placeholder="Search by customer, city, ID..."
+            placeholder="Search customer, city, order ID, AWB..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full h-10 pl-9 pr-4 rounded-xl border border-[#E8E8E8] bg-white text-xs text-[#111111] focus:outline-none focus:border-[#3F46D8] transition-colors"
@@ -237,7 +263,7 @@ export default function StoreAdminOrdersPage() {
       {loading ? (
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-36 bg-white rounded-2xl border border-[#E8E8E8] animate-pulse p-6" />
+            <div key={i} className="h-44 bg-white rounded-2xl border border-[#E8E8E8] animate-pulse p-6" />
           ))}
         </div>
       ) : filteredOrders.length === 0 ? (
@@ -247,7 +273,7 @@ export default function StoreAdminOrdersPage() {
           <p className="text-xs text-[#888888] max-w-sm mx-auto">
             {filter !== 'ALL'
               ? `No orders currently matching "${filter}". Try selecting "All Orders".`
-              : 'When customers place orders for your products, they will appear here with full dispatch details.'}
+              : 'When customers place orders for your products, they will appear here with full Shiprocket consignment details.'}
           </p>
         </div>
       ) : (
@@ -263,13 +289,31 @@ export default function StoreAdminOrdersPage() {
               >
                 {/* Order Top Bar */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#F0F0F0] pb-4">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 flex-wrap">
                     <span className="text-base font-black text-[#111111]">Order #{order.id}</span>
                     <span
                       className={`inline-flex items-center gap-1 text-[11px] font-bold px-3 py-0.5 rounded-full border ${cfg.badge}`}
                     >
                       <StatusIcon className="h-3 w-3" /> {cfg.label}
                     </span>
+
+                    {/* Payment Badge */}
+                    {order.paymentMethod === 'RAZORPAY' ? (
+                      <span className="text-[10px] font-extrabold uppercase bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md flex items-center gap-1">
+                        <Zap className="h-3 w-3" /> Razorpay Paid
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-extrabold uppercase bg-amber-100 text-amber-800 px-2 py-0.5 rounded-md flex items-center gap-1">
+                        <CreditCard className="h-3 w-3" /> Cash on Delivery (COD)
+                      </span>
+                    )}
+
+                    {/* Shiprocket AWB Tag */}
+                    {order.awbCode && (
+                      <span className="text-[10px] font-extrabold bg-indigo-50 text-[#3F46D8] border border-indigo-100 px-2.5 py-0.5 rounded-md flex items-center gap-1">
+                        <Truck className="h-3 w-3" /> AWB: {order.awbCode} ({order.courierName || 'Shiprocket'})
+                      </span>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-4 text-xs text-[#6B6B6B]">
@@ -280,12 +324,13 @@ export default function StoreAdminOrdersPage() {
                   </div>
                 </div>
 
-                {/* Content: Customer Info + Products */}
+                {/* Content: Customer Info + Products + Logistics */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   {/* Customer & Shipping Details */}
                   <div className="space-y-3 text-xs bg-[#FBFBFA] rounded-2xl p-4 border border-[#F0F0EE]">
-                    <p className="text-[10px] font-extrabold text-[#888888] uppercase tracking-wider">
-                      Customer &amp; Shipping
+                    <p className="text-[10px] font-extrabold text-[#888888] uppercase tracking-wider flex items-center justify-between">
+                      <span>Customer &amp; Shipping</span>
+                      <span className="text-[9px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded font-bold">Verified Buyer</span>
                     </p>
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 font-bold text-[#111111]">
@@ -298,18 +343,28 @@ export default function StoreAdminOrdersPage() {
                         <Mail className="h-3.5 w-3.5 text-[#888888]" /> {order.email}
                       </div>
                       <div className="flex items-start gap-2 text-[#555555] pt-1 border-t border-[#ECECE9]">
-                        <MapPin className="h-3.5 w-3.5 text-[#888888] shrink-0 mt-0.5" />
+                        <MapPin className="h-3.5 w-3.5 text-rose-500 shrink-0 mt-0.5" />
                         <span>
                           {order.address}, {order.city} - {order.postalCode}
                         </span>
                       </div>
                     </div>
+
+                    {/* Pickup Warehouse Info */}
+                    {order.pickupCity && (
+                      <div className="pt-2 border-t border-[#ECECE9] text-[11px] text-[#777777]">
+                        <span className="font-bold text-[#111111] flex items-center gap-1 mb-0.5">
+                          <Building className="h-3 w-3 text-indigo-500" /> Dispatch Warehouse:
+                        </span>
+                        <p className="line-clamp-1">{order.pickupAddress || 'Warehouse Hub'}, {order.pickupCity}</p>
+                      </div>
+                    )}
                   </div>
 
                   {/* Order Items */}
                   <div className="lg:col-span-2 space-y-3">
                     <p className="text-[10px] font-extrabold text-[#888888] uppercase tracking-wider">
-                      Items in Order ({order.items.length})
+                      Ordered Products ({order.items.length})
                     </p>
                     <div className="space-y-2">
                       {order.items.map((item) => (
@@ -345,59 +400,69 @@ export default function StoreAdminOrdersPage() {
                     </div>
 
                     {/* Order Status Action Buttons */}
-                    <div className="flex flex-wrap items-center justify-end gap-2 pt-3 border-t border-[#F0F0F0]">
-                      <span className="text-xs font-semibold text-[#888888] mr-2">Update Stage:</span>
+                    <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-[#F0F0F0]">
+                      <Link
+                        href={`/orders/${order.id}`}
+                        target="_blank"
+                        className="text-xs font-bold text-[#3F46D8] hover:text-indigo-800 flex items-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-xl transition-colors"
+                      >
+                        <Navigation className="h-3.5 w-3.5" />
+                        Live Map Tracking
+                        <ExternalLink className="h-3 w-3" />
+                      </Link>
 
-                      {order.status === 'PLACED' && (
-                        <Button
-                          size="sm"
-                          disabled={updatingId === order.id}
-                          onClick={() => handleUpdateStatus(order.id, 'CONFIRMED')}
-                          className="h-8 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-xl"
-                        >
-                          Confirm Order
-                        </Button>
-                      )}
+                      <div className="flex flex-wrap items-center gap-2">
+                        {order.status === 'PLACED' && (
+                          <Button
+                            size="sm"
+                            disabled={updatingId === order.id}
+                            onClick={() => handleUpdateStatus(order.id, 'CONFIRMED')}
+                            className="h-8 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-xl gap-1.5"
+                          >
+                            <Sparkles className="h-3.5 w-3.5" /> Confirm &amp; Manifest (Shiprocket)
+                          </Button>
+                        )}
 
-                      {(order.status === 'PLACED' || order.status === 'CONFIRMED') && (
-                        <Button
-                          size="sm"
-                          disabled={updatingId === order.id}
-                          onClick={() => handleUpdateStatus(order.id, 'SHIPPED')}
-                          className="h-8 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl gap-1.5"
-                        >
-                          <Truck className="h-3.5 w-3.5" /> Mark as Shipped
-                        </Button>
-                      )}
+                        {(order.status === 'PLACED' || order.status === 'CONFIRMED') && (
+                          <Button
+                            size="sm"
+                            disabled={updatingId === order.id}
+                            onClick={() => handleUpdateStatus(order.id, 'SHIPPED')}
+                            className="h-8 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl gap-1.5"
+                          >
+                            <Truck className="h-3.5 w-3.5" /> Dispatch / In-Transit
+                          </Button>
+                        )}
 
-                      {order.status === 'SHIPPED' && (
-                        <Button
-                          size="sm"
-                          disabled={updatingId === order.id}
-                          onClick={() => handleUpdateStatus(order.id, 'DELIVERED')}
-                          className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl gap-1.5"
-                        >
-                          <CheckCircle2 className="h-3.5 w-3.5" /> Mark Delivered
-                        </Button>
-                      )}
+                        {order.status === 'SHIPPED' && (
+                          <Button
+                            size="sm"
+                            disabled={updatingId === order.id}
+                            onClick={() => handleUpdateStatus(order.id, 'DELIVERED')}
+                            className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl gap-1.5"
+                          >
+                            <CheckCircle2 className="h-3.5 w-3.5" /> Mark Delivered
+                          </Button>
+                        )}
 
-                      {order.status !== 'DELIVERED' && order.status !== 'CANCELLED' && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={updatingId === order.id}
-                          onClick={() => handleUpdateStatus(order.id, 'CANCELLED')}
-                          className="h-8 border-red-200 text-red-600 hover:bg-red-50 text-xs font-bold rounded-xl"
-                        >
-                          Cancel
-                        </Button>
-                      )}
+                        {order.status !== 'DELIVERED' && order.status !== 'CANCELLED' && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={updatingId === order.id}
+                            onClick={() => handleUpdateStatus(order.id, 'CANCELLED')}
+                            className="h-8 border-red-200 text-red-600 hover:bg-red-50 text-xs font-bold rounded-xl"
+                          >
+                            Cancel
+                          </Button>
+                        )}
 
-                      {order.status === 'DELIVERED' && (
-                        <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full flex items-center gap-1 border border-emerald-200">
-                          <CheckCircle2 className="h-3.5 w-3.5" /> Fulfilled &amp; Settled
-                        </span>
-                      )}
+                        {order.status === 'DELIVERED' && (
+                          <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full flex items-center gap-1 border border-emerald-200">
+                            <CheckCircle2 className="h-3.5 w-3.5" /> Delivered &amp; Settled
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useUser } from '@clerk/nextjs';
 import { useApiAuth } from '@/lib/hooks/useApiAuth';
 import {
@@ -17,6 +18,13 @@ import {
   Mail,
   User,
   RefreshCw,
+  Zap,
+  CreditCard,
+  Building,
+  Navigation,
+  ExternalLink,
+  ShieldCheck,
+  Store,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -29,6 +37,9 @@ interface OrderItem {
     id: number;
     name: string;
     image?: string;
+    storeName?: string;
+    sellerEmail?: string;
+    storeAdminName?: string;
   };
 }
 
@@ -44,6 +55,24 @@ interface Order {
   postalCode: string;
   items: OrderItem[];
   createdAt: string;
+
+  // Payment
+  paymentMethod?: string;
+  paymentStatus?: string;
+  paymentId?: string;
+  razorpayOrderId?: string;
+
+  // Shiprocket Logistics
+  shipmentId?: string;
+  awbCode?: string;
+  courierName?: string;
+  trackingStatus?: string;
+
+  // Origin & Destination
+  pickupAddress?: string;
+  pickupCity?: string;
+  pickupState?: string;
+  pickupPostalCode?: string;
 }
 
 const STATUS_CONFIG: Record<
@@ -57,13 +86,13 @@ const STATUS_CONFIG: Record<
     color: 'text-amber-700',
   },
   CONFIRMED: {
-    label: 'Confirmed',
+    label: 'Confirmed (Manifested)',
     icon: CheckCircle2,
     badgeClass: 'bg-blue-50 text-blue-700 border border-blue-200',
     color: 'text-blue-700',
   },
   SHIPPED: {
-    label: 'Shipped',
+    label: 'Shipped & In-Transit',
     icon: Truck,
     badgeClass: 'bg-purple-50 text-purple-700 border border-purple-200',
     color: 'text-purple-700',
@@ -143,7 +172,7 @@ export default function SuperAdminOrdersPage() {
       if (res.ok) {
         const updated: Order = await res.json();
         setOrders(prev => prev.map(o => (o.id === orderId ? updated : o)));
-        toast.success(`Order #${orderId} marked as ${newStatus}`);
+        toast.success(`Order #${orderId} marked as ${newStatus} (Shiprocket & Email updated)`);
       } else {
         toast.error('Failed to update order status');
       }
@@ -162,9 +191,9 @@ export default function SuperAdminOrdersPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-extrabold text-[#111111]">Order Management</h1>
+          <h1 className="text-2xl font-extrabold text-[#111111]">Platform Order Management</h1>
           <p className="text-sm text-[#6B6B6B] mt-0.5">
-            Monitor orders across the marketplace, track shipments, and update delivery status
+            Monitor all buyer purchases, identify seller stores, inspect Shiprocket consignments, and control dispatch.
           </p>
         </div>
         <Button
@@ -243,9 +272,28 @@ export default function SuperAdminOrdersPage() {
                         <StatusIcon className="h-3 w-3" />
                         {order.status}
                       </span>
+
+                      {/* Payment Tag */}
+                      {order.paymentMethod === 'RAZORPAY' ? (
+                        <span className="text-[10px] font-extrabold uppercase bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md flex items-center gap-1">
+                          <Zap className="h-3 w-3" /> Razorpay Paid
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-extrabold uppercase bg-amber-100 text-amber-800 px-2 py-0.5 rounded-md flex items-center gap-1">
+                          <CreditCard className="h-3 w-3" /> COD
+                        </span>
+                      )}
+
+                      {/* Shiprocket AWB Tag */}
+                      {order.awbCode && (
+                        <span className="text-[10px] font-extrabold bg-indigo-50 text-[#3F46D8] border border-indigo-100 px-2.5 py-0.5 rounded-md flex items-center gap-1">
+                          <Truck className="h-3 w-3" /> {order.courierName || 'Shiprocket'} ({order.awbCode})
+                        </span>
+                      )}
                     </div>
+
                     <p className="text-xs text-[#6B6B6B] mt-0.5 truncate">
-                      {order.fullName} · {order.items.length} item{order.items.length > 1 ? 's' : ''} · {order.city}
+                      Buyer: <strong className="text-[#111111]">{order.fullName}</strong> ({order.email}) · {order.items.length} item{order.items.length > 1 ? 's' : ''} · {order.city}
                     </p>
                   </div>
 
@@ -274,11 +322,13 @@ export default function SuperAdminOrdersPage() {
                 {/* Expanded Details */}
                 {isExpanded && (
                   <div className="px-5 pb-5 border-t border-[#E8E8E8] space-y-4 pt-4">
-                    {/* Customer & Shipping Details */}
+                    {/* Dual Column: Buyer Info + Seller/Logistics Details */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-[#F7F7F5] p-4 rounded-xl border border-[#E8E8E8]">
+                      {/* Buyer Details */}
                       <div className="space-y-1.5">
-                        <p className="text-[10px] font-bold text-[#888888] uppercase tracking-wider">
-                          Customer Information
+                        <p className="text-[10px] font-bold text-[#888888] uppercase tracking-wider flex items-center justify-between">
+                          <span>Buyer &amp; Delivery Destination</span>
+                          <span className="text-[9px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded font-bold">Customer</span>
                         </p>
                         <p className="text-xs text-[#111111] font-semibold flex items-center gap-1.5">
                           <User className="h-3.5 w-3.5 text-[#3F46D8]" /> {order.fullName}
@@ -289,25 +339,48 @@ export default function SuperAdminOrdersPage() {
                         <p className="text-xs text-[#6B6B6B] flex items-center gap-1.5">
                           <Phone className="h-3.5 w-3.5 text-[#888888]" /> {order.phoneNumber}
                         </p>
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <p className="text-[10px] font-bold text-[#888888] uppercase tracking-wider">
-                          Delivery Address
-                        </p>
-                        <p className="text-xs text-[#444444] flex items-start gap-1.5 leading-relaxed">
-                          <MapPin className="h-3.5 w-3.5 text-red-500 shrink-0 mt-0.5" />
+                        <p className="text-xs text-[#444444] flex items-start gap-1.5 pt-1 border-t border-gray-200">
+                          <MapPin className="h-3.5 w-3.5 text-rose-500 shrink-0 mt-0.5" />
                           <span>
                             {order.address}, {order.city} - {order.postalCode}
                           </span>
                         </p>
+                      </div>
+
+                      {/* Origin Warehouse & Shiprocket Logistics */}
+                      <div className="space-y-1.5">
+                        <p className="text-[10px] font-bold text-[#888888] uppercase tracking-wider flex items-center justify-between">
+                          <span>Seller Warehouse &amp; Shiprocket</span>
+                          <span className="text-[9px] text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded font-bold">Origin Hub</span>
+                        </p>
+                        <p className="text-xs text-[#111111] font-semibold flex items-center gap-1.5">
+                          <Building className="h-3.5 w-3.5 text-indigo-500" />
+                          <span>{order.pickupAddress || 'Platform Hub'}, {order.pickupCity || 'Mumbai'}</span>
+                        </p>
+                        <p className="text-xs text-[#6B6B6B] flex items-center gap-1.5">
+                          <Truck className="h-3.5 w-3.5 text-[#888888]" />
+                          <span>Courier: {order.courierName || 'Shiprocket Express'}</span>
+                        </p>
+                        <p className="text-xs text-[#6B6B6B] flex items-center gap-1.5">
+                          <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
+                          <span>AWB Code: <strong className="font-mono text-[#111111]">{order.awbCode || 'Assigned on Manifest'}</strong></span>
+                        </p>
+                        <div className="pt-2 border-t border-gray-200 flex items-center justify-between">
+                          <Link
+                            href={`/orders/${order.id}`}
+                            target="_blank"
+                            className="text-xs font-bold text-[#3F46D8] hover:text-indigo-800 flex items-center gap-1"
+                          >
+                            <Navigation className="h-3.5 w-3.5" /> Open Leaflet Live Route Map <ExternalLink className="h-3 w-3" />
+                          </Link>
+                        </div>
                       </div>
                     </div>
 
                     {/* Order Items */}
                     <div>
                       <p className="text-[10px] font-bold text-[#888888] uppercase tracking-wider mb-2">
-                        Ordered Items
+                        Purchased Items &amp; Sellers
                       </p>
                       <div className="divide-y divide-[#E8E8E8] rounded-xl border border-[#E8E8E8] overflow-hidden bg-white">
                         {order.items.map(item => (
@@ -319,20 +392,25 @@ export default function SuperAdminOrdersPage() {
                               <img
                                 src={item.product.image}
                                 alt={item.product.name}
-                                className="h-10 w-10 rounded-lg object-cover border border-[#E8E8E8]"
+                                className="h-12 w-12 rounded-xl object-cover border border-[#E8E8E8]"
                               />
                             ) : (
-                              <div className="h-10 w-10 rounded-lg bg-gray-100 flex items-center justify-center">
-                                <ShoppingBag className="h-4 w-4 text-gray-400" />
+                              <div className="h-12 w-12 rounded-xl bg-gray-100 flex items-center justify-center">
+                                <ShoppingBag className="h-5 w-5 text-gray-400" />
                               </div>
                             )}
                             <div className="flex-1 min-w-0">
-                              <p className="font-semibold truncate">{item.product?.name}</p>
-                              <p className="text-[#6B6B6B] text-[11px]">
-                                Qty: {item.quantity} × ₹{item.price?.toLocaleString('en-IN')}
-                              </p>
+                              <p className="font-bold text-[#111111] truncate">{item.product?.name}</p>
+                              <div className="flex items-center gap-2 text-[11px] text-[#6B6B6B]">
+                                <span>Qty: {item.quantity} × ₹{item.price?.toLocaleString('en-IN')}</span>
+                                {item.product?.storeName && (
+                                  <span className="text-[10px] bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded font-semibold flex items-center gap-1">
+                                    <Store className="h-3 w-3" /> {item.product.storeName}
+                                  </span>
+                                )}
+                              </div>
                             </div>
-                            <p className="font-bold text-[#111111]">
+                            <p className="font-extrabold text-[#111111] text-sm">
                               ₹{(item.quantity * item.price)?.toLocaleString('en-IN')}
                             </p>
                           </div>
@@ -343,9 +421,9 @@ export default function SuperAdminOrdersPage() {
                     {/* Status Management Bar */}
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-[#F7F7F5] p-4 rounded-xl border border-[#E8E8E8]">
                       <div>
-                        <p className="text-xs font-bold text-[#111111]">Update Order Status</p>
+                        <p className="text-xs font-bold text-[#111111]">Update Fulfillment Status</p>
                         <p className="text-[11px] text-[#6B6B6B]">
-                          Change shipment status for order #{order.id}
+                          Updates Shiprocket consignment, recalculates seller payout, and emails the buyer.
                         </p>
                       </div>
 

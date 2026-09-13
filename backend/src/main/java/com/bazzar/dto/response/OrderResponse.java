@@ -25,4 +25,26 @@ public class OrderResponse {
     private String postalCode;
     private List<OrderItemResponse> items;
     private LocalDateTime createdAt;
+
+    // Payment Info
+    private String paymentMethod;
+    private String paymentStatus;
+    private String paymentId;
+    private String razorpayOrderId;
+
+    // Logistics & Tracking Info
+    private String shipmentId;
+    private String awbCode;
+    private String courierName;
+    private String trackingStatus;
+
+    // Location Coordinates
+    private String pickupAddress;
+    private String pickupCity;
+    private String pickupState;
+    private String pickupPostalCode;
+    private Double pickupLat;
+    private Double pickupLng;
+    private Double deliveryLat;
+    private Double deliveryLng;
 }

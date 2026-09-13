@@ -49,6 +49,58 @@ public class Order {
     @Column(name = "postal_code", nullable = false)
     private String postalCode;
 
+    // ── Payment Details (Razorpay / COD) ─────────────────────────────────────
+    @Column(name = "payment_method")
+    private String paymentMethod; // "RAZORPAY", "COD"
+
+    @Column(name = "payment_status")
+    private String paymentStatus; // "PENDING", "PAID", "FAILED", "COD_PENDING"
+
+    @Column(name = "payment_id")
+    private String paymentId; // Razorpay payment ID (pay_...)
+
+    @Column(name = "razorpay_order_id")
+    private String razorpayOrderId; // Razorpay order ID (order_...)
+
+    // ── Shipping & Logistics (Shiprocket) ────────────────────────────────────
+    @Column(name = "shipment_id")
+    private String shipmentId; // Shiprocket shipment ID
+
+    @Column(name = "awb_code")
+    private String awbCode; // Shiprocket AWB tracking code
+
+    @Column(name = "courier_name")
+    private String courierName; // "Delhivery", "Blue Dart", etc.
+
+    @Column(name = "tracking_status")
+    private String trackingStatus; // "PLACED", "MANIFESTED", "PICKED_UP", "IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERED"
+
+    // ── Pickup Origin (Seller Store / Warehouse Location) ────────────────────
+    @Column(name = "pickup_address")
+    private String pickupAddress;
+
+    @Column(name = "pickup_city")
+    private String pickupCity;
+
+    @Column(name = "pickup_state")
+    private String pickupState;
+
+    @Column(name = "pickup_postal_code")
+    private String pickupPostalCode;
+
+    @Column(name = "pickup_lat")
+    private Double pickupLat;
+
+    @Column(name = "pickup_lng")
+    private Double pickupLng;
+
+    // ── Delivery Destination Coordinates ─────────────────────────────────────
+    @Column(name = "delivery_lat")
+    private Double deliveryLat;
+
+    @Column(name = "delivery_lng")
+    private Double deliveryLng;
+
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @Builder.Default
     private List<OrderItem> items = new ArrayList<>();
@@ -61,6 +113,12 @@ public class Order {
         this.createdAt = LocalDateTime.now();
         if (this.status == null) {
             this.status = OrderStatus.PLACED;
+        }
+        if (this.paymentStatus == null) {
+            this.paymentStatus = "PENDING";
+        }
+        if (this.trackingStatus == null) {
+            this.trackingStatus = "PLACED";
         }
     }
 }

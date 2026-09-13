@@ -31,6 +31,7 @@ public class StoreAdminService {
     private final CategoryService categoryService;
     private final EmailService emailService;
     private final OrderRepository orderRepository;
+    private final OrderService orderService;
 
     public StoreAdminService(ClerkUserResolver clerkUserResolver,
                               UserRepository userRepository,
@@ -40,7 +41,8 @@ public class StoreAdminService {
                               CategoryRepository categoryRepository,
                               CategoryService categoryService,
                               EmailService emailService,
-                              OrderRepository orderRepository) {
+                              OrderRepository orderRepository,
+                              OrderService orderService) {
         this.clerkUserResolver = clerkUserResolver;
         this.userRepository = userRepository;
         this.applicationRepository = applicationRepository;
@@ -50,6 +52,7 @@ public class StoreAdminService {
         this.categoryService = categoryService;
         this.emailService = emailService;
         this.orderRepository = orderRepository;
+        this.orderService = orderService;
     }
 
     // ── APPLICATION ──────────────────────────────────────────────────────────
@@ -258,16 +261,13 @@ public class StoreAdminService {
         if (orders.isEmpty() && user.getRole() == Role.ROLE_SUPER_ADMIN) {
             orders = orderRepository.findAllByOrderByCreatedAtDesc();
         }
-        return orders.stream().map(this::toOrderResponse).toList();
+        return orders.stream().map(orderService::toResponse).toList();
     }
 
     @Transactional
     public OrderResponse updateMyOrderStatus(Jwt jwt, Long orderId, OrderStatus status) {
         User user = clerkUserResolver.resolveOrThrow(jwt);
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
-        order.setStatus(status);
-        return toOrderResponse(orderRepository.save(order));
+        return orderService.updateOrderStatus(orderId, status);
     }
 
     // ── DASHBOARD STATS ──────────────────────────────────────────────────────

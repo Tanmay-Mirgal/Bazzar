@@ -8,6 +8,7 @@ import com.bazzar.entity.User;
 import com.bazzar.exception.BadRequestException;
 import com.bazzar.exception.ResourceNotFoundException;
 import com.bazzar.repository.OrderRepository;
+import com.bazzar.service.EmailService;
 import com.bazzar.service.OrderService;
 import com.bazzar.service.RazorpayService;
 import com.bazzar.service.ShiprocketService;

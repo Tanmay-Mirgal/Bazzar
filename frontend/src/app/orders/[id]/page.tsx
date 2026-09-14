@@ -11,24 +11,20 @@ import {
   BackendOrder,
   OrderTrackingData,
 } from '@/lib/api/orders';
-import { formatCurrency } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
+  ShoppingBag,
+  CheckCircle2,
   Package,
   Truck,
-  CheckCircle2,
-  Clock,
   MapPin,
-  ArrowLeft,
-  Copy,
-  ExternalLink,
-  ShieldCheck,
-  CreditCard,
-  Building2,
+  Home,
   Phone,
-  Mail,
+  ArrowLeft,
   RefreshCw,
-  Sparkles,
+  Box,
+  Navigation,
+  Check,
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { toast } from 'sonner';
@@ -39,8 +35,8 @@ const LiveTrackingMap = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="w-full h-[380px] bg-[#F4F4F6] rounded-3xl animate-pulse flex items-center justify-center text-xs text-[#888888] font-bold">
-        Loading Interactive Live Satellite Radar...
+      <div className="w-full h-[460px] bg-[#F4F4F6] rounded-2xl animate-pulse flex items-center justify-center text-xs text-gray-500 font-medium">
+        Loading Interactive Live Tracking Map...
       </div>
     ),
   }
@@ -99,19 +95,17 @@ export default function OrderTrackingPage({ params }: TrackingPageProps) {
     }
   }, [userLoaded, user, orderId]);
 
-  const copyToClipboard = (text: string, label: string) => {
-    navigator.clipboard.writeText(text);
-    toast.success(`${label} copied to clipboard!`);
-  };
-
   if (loading) {
     return (
-      <div className="mx-auto max-w-6xl px-4 py-16 space-y-6">
-        <div className="h-8 w-48 bg-gray-100 animate-pulse rounded-lg" />
-        <div className="h-96 w-full bg-gray-100 animate-pulse rounded-3xl" />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="h-64 bg-gray-100 animate-pulse rounded-3xl" />
-          <div className="h-64 bg-gray-100 animate-pulse rounded-3xl" />
+      <div className="mx-auto max-w-7xl px-4 py-12 space-y-6">
+        <div className="h-28 w-full bg-gray-100 animate-pulse rounded-2xl" />
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="lg:col-span-7 h-[460px] bg-gray-100 animate-pulse rounded-2xl" />
+          <div className="lg:col-span-5 space-y-4">
+            <div className="h-32 bg-gray-100 animate-pulse rounded-2xl" />
+            <div className="h-44 bg-gray-100 animate-pulse rounded-2xl" />
+            <div className="h-48 bg-gray-100 animate-pulse rounded-2xl" />
+          </div>
         </div>
       </div>
     );
@@ -119,97 +113,176 @@ export default function OrderTrackingPage({ params }: TrackingPageProps) {
 
   if (!order || !tracking) {
     return (
-      <div className="mx-auto max-w-xl px-4 py-20 text-center space-y-6">
+      <div className="mx-auto max-w-md px-4 py-20 text-center space-y-6">
         <div className="h-16 w-16 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mx-auto border border-rose-200">
           <Package className="h-8 w-8" />
         </div>
         <div className="space-y-2">
-          <h1 className="text-2xl font-extrabold text-[#111111]">Order Not Found</h1>
-          <p className="text-xs text-[#6B6B6B]">
+          <h1 className="text-xl font-bold text-gray-900">Order Not Found</h1>
+          <p className="text-xs text-gray-500">
             We could not locate shipment tracking records for order #{orderId}.
           </p>
         </div>
         <Link href="/products">
-          <Button className="rounded-none bg-[#111111] hover:bg-[#3F46D8] text-white text-xs font-bold px-6 h-11">
-            <ArrowLeft className="h-4 w-4 mr-2" /> Back to Catalog
+          <Button className="rounded-xl bg-gray-900 hover:bg-indigo-600 text-white text-xs font-semibold px-6 h-10">
+            <ArrowLeft className="h-4 w-4 mr-2" /> Back to Products
           </Button>
         </Link>
       </div>
     );
   }
 
-  const isDelivered = tracking.trackingStatus === 'DELIVERED';
+  // Define 8 status steps mapping
+  const trackingStatusKey = (tracking.trackingStatus || order.status || 'PLACED').toUpperCase();
+
+  const getStatusStepIndex = (status: string) => {
+    switch (status) {
+      case 'PLACED':
+        return 0;
+      case 'CONFIRMED':
+      case 'MANIFESTED':
+        return 1;
+      case 'PACKED':
+      case 'PROCESSING':
+        return 2;
+      case 'SHIPPED':
+      case 'PICKED_UP':
+        return 3;
+      case 'IN_TRANSIT':
+        return 4;
+      case 'ARRIVED_AT_HUB':
+        return 5;
+      case 'OUT_FOR_DELIVERY':
+        return 6;
+      case 'DELIVERED':
+        return 7;
+      default:
+        return 1;
+    }
+  };
+
+  const currentStepIndex = getStatusStepIndex(trackingStatusKey);
+
+  const steps = [
+    { label: 'Order Placed', icon: ShoppingBag },
+    { label: 'Order Confirmed', icon: Box },
+    { label: 'Packed', icon: Package },
+    { label: 'Shipped', icon: Truck },
+    { label: 'In Transit', icon: Navigation },
+    { label: 'Arrived at Hub', icon: MapPin },
+    { label: 'Out for Delivery', icon: Truck },
+    { label: 'Delivered', icon: Check },
+  ];
+
+  // Format readable status text
+  const formatStatusText = (status: string) => {
+    switch (status.toUpperCase()) {
+      case 'OUT_FOR_DELIVERY':
+        return 'Out for Delivery';
+      case 'IN_TRANSIT':
+        return 'In Transit';
+      case 'SHIPPED':
+        return 'Shipped';
+      case 'CONFIRMED':
+      case 'MANIFESTED':
+        return 'Order Confirmed';
+      case 'PACKED':
+        return 'Packed';
+      case 'DELIVERED':
+        return 'Delivered';
+      case 'PLACED':
+        return 'Order Placed';
+      default:
+        return status;
+    }
+  };
 
   return (
-    <div className="bg-white min-h-screen pb-24 text-[#111111]">
-      {/* Header Banner */}
-      <div className="bg-[#F7F7F5] border-b border-[#E8E8E8] py-8 px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-6xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <Link
-              href="/orders"
-              className="inline-flex items-center text-xs font-bold text-[#6B6B6B] hover:text-[#111111] mb-2 gap-1.5 transition-colors"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" /> All Orders
-            </Link>
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl sm:text-3xl font-black text-[#111111] tracking-tight">
-                Shipment Tracking #{order.id}
-              </h1>
-              <span
-                className={`text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider ${
-                  isDelivered
-                    ? 'bg-emerald-100 text-emerald-800'
-                    : 'bg-indigo-100 text-[#3F46D8]'
-                }`}
-              >
-                {tracking.trackingStatus}
-              </span>
+    <div className="bg-[#FBFBFB] min-h-screen py-8 px-4 sm:px-6 lg:px-8 text-gray-900">
+      <div className="mx-auto max-w-7xl space-y-6">
+
+        {/* Back Link */}
+        <div className="flex items-center justify-between">
+          <Link
+            href="/orders"
+            className="inline-flex items-center text-xs font-semibold text-gray-600 hover:text-gray-900 gap-1.5 transition-colors"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" /> All Orders
+          </Link>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => fetchTrackingData(true)}
+            disabled={refreshing}
+            className="text-xs font-semibold text-gray-600 hover:text-gray-900 gap-1.5 h-8 px-2.5"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin text-emerald-600' : ''}`} />
+            {refreshing ? 'Syncing...' : 'Sync Radar'}
+          </Button>
+        </div>
+
+        {/* 1. TOP HORIZONTAL STEPPER CARD: "Order Status" */}
+        <div className="bg-white rounded-2xl border border-[#E8E8E8] p-6 sm:p-8 shadow-xs">
+          <h2 className="text-base font-bold text-gray-900 mb-8">Order Status</h2>
+
+          <div className="relative">
+            {/* Step Items */}
+            <div className="grid grid-cols-4 sm:grid-cols-8 gap-y-6 gap-x-2 relative z-10">
+              {steps.map((step, index) => {
+                const isCompleted = index <= currentStepIndex;
+                const IconComponent = step.icon;
+
+                return (
+                  <div key={step.label} className="flex flex-col items-center text-center relative group">
+                    {/* Connecting line to previous step (desktop) */}
+                    {index > 0 && (
+                      <div
+                        className={`hidden sm:block absolute top-5 -left-1/2 w-full h-[2px] -z-10 ${
+                          index <= currentStepIndex ? 'bg-[#10B981]' : 'bg-gray-200'
+                        }`}
+                      />
+                    )}
+
+                    {/* Step Icon Circle */}
+                    <div
+                      className={`h-11 w-11 rounded-full flex items-center justify-center transition-all ${
+                        isCompleted
+                          ? 'bg-[#10B981] text-white shadow-sm ring-4 ring-emerald-50'
+                          : 'bg-[#F3F4F6] text-gray-400 border border-gray-200'
+                      }`}
+                    >
+                      <IconComponent className="h-5 w-5" />
+                    </div>
+
+                    {/* Step Label */}
+                    <span
+                      className={`text-[11px] mt-2.5 font-medium max-w-[90px] leading-tight ${
+                        isCompleted ? 'text-gray-900 font-semibold' : 'text-gray-400'
+                      }`}
+                    >
+                      {step.label}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
-            <p className="text-xs text-[#6B6B6B] mt-1">
-              Estimated Delivery: <strong className="text-[#111111] font-bold">{tracking.estimatedDelivery}</strong>
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => fetchTrackingData(true)}
-              disabled={refreshing}
-              className="rounded-xl border-[#E8E8E8] text-xs font-bold gap-2 h-10 px-4 bg-white"
-            >
-              <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin text-[#3F46D8]' : ''}`} />
-              {refreshing ? 'Syncing...' : 'Sync Live Radar'}
-            </Button>
-
-            <Button
-              onClick={() => window.print()}
-              variant="outline"
-              size="sm"
-              className="rounded-xl border-[#111111] text-[#111111] text-xs font-bold h-10 px-4 bg-white hidden sm:inline-flex"
-            >
-              Print Receipt
-            </Button>
           </div>
         </div>
-      </div>
 
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        {/* Section 1: Leaflet Interactive Map */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-black uppercase tracking-widest text-[#3F46D8] flex items-center gap-1.5">
-                <Sparkles className="h-3.5 w-3.5" /> Real-Time GPS Logistics Telemetry
+        {/* 2. MAIN 2-COLUMN GRID */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+          {/* LEFT COLUMN: Live Tracking Map (7 cols) */}
+          <div className="lg:col-span-7 bg-white rounded-2xl border border-[#E8E8E8] p-6 shadow-xs space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-bold text-gray-900">Live Tracking</h2>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                Live Updates
               </span>
             </div>
-            <span className="text-xs text-[#888888] font-medium hidden sm:inline">
-              Interactive OpenStreetMap • Pan &amp; Zoom
-            </span>
-          </div>
 
-          <div className="h-[420px] w-full">
             <LiveTrackingMap
               origin={tracking.origin}
               destination={tracking.destination}
@@ -218,188 +291,129 @@ export default function OrderTrackingPage({ params }: TrackingPageProps) {
               courierName={tracking.courierName}
               awbCode={tracking.awbCode}
               trackingStatus={tracking.trackingStatus}
+              estimatedDelivery={tracking.estimatedDelivery}
             />
           </div>
-        </div>
 
-        {/* Section 2: Logistics Overview Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-[#F7F7F5] border border-[#E8E8E8] p-4 rounded-2xl space-y-1">
-            <p className="text-[10px] font-bold text-[#888888] uppercase tracking-wider">Courier Aggregator</p>
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-extrabold text-[#111111]">{tracking.courierName}</p>
-              <Truck className="h-4 w-4 text-[#3F46D8]" />
-            </div>
-            <p className="text-[11px] text-emerald-600 font-semibold">Shiprocket Surface Express</p>
-          </div>
-
-          <div className="bg-[#F7F7F5] border border-[#E8E8E8] p-4 rounded-2xl space-y-1">
-            <p className="text-[10px] font-bold text-[#888888] uppercase tracking-wider">AWB Consignment Number</p>
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-mono font-bold text-[#111111] truncate">{tracking.awbCode}</p>
-              <button
-                onClick={() => copyToClipboard(tracking.awbCode, 'AWB Code')}
-                className="text-[#6B6B6B] hover:text-[#111111] transition-colors"
-                title="Copy AWB"
-              >
-                <Copy className="h-3.5 w-3.5" />
-              </button>
-            </div>
-            <p className="text-[11px] text-[#888888]">Barcoded Manifest</p>
-          </div>
-
-          <div className="bg-[#F7F7F5] border border-[#E8E8E8] p-4 rounded-2xl space-y-1">
-            <p className="text-[10px] font-bold text-[#888888] uppercase tracking-wider">Payment Method</p>
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-extrabold text-[#111111]">{tracking.paymentMethod}</p>
-              <CreditCard className="h-4 w-4 text-[#3F46D8]" />
-            </div>
-            <p className="text-[11px] font-bold text-emerald-600 uppercase">
-              {tracking.paymentStatus}
-            </p>
-          </div>
-
-          <div className="bg-[#F7F7F5] border border-[#E8E8E8] p-4 rounded-2xl space-y-1">
-            <p className="text-[10px] font-bold text-[#888888] uppercase tracking-wider">Total Consignment Value</p>
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-black text-[#111111]">{formatCurrency(tracking.totalAmount)}</p>
-              <ShieldCheck className="h-4 w-4 text-emerald-600" />
-            </div>
-            <p className="text-[11px] text-[#888888]">Includes Taxes &amp; Logistics</p>
-          </div>
-        </div>
-
-        {/* Section 3: Dual Column: Live Timeline + Location Hubs */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* Timeline Checkpoints (8 cols) */}
-          <div className="lg:col-span-7 bg-white rounded-3xl border border-[#E8E8E8] p-6 space-y-6">
-            <div className="border-b border-[#E8E8E8] pb-4">
-              <h2 className="text-base font-extrabold text-[#111111] flex items-center gap-2">
-                <Clock className="h-4 w-4 text-[#3F46D8]" /> Shipment Checkpoint Timeline
-              </h2>
-              <p className="text-xs text-[#6B6B6B] mt-0.5">
-                Live scans from Shiprocket logistics fulfillment centers
-              </p>
-            </div>
-
-            <div className="relative pl-6 space-y-8 before:absolute before:left-2.5 before:top-3 before:bottom-3 before:w-0.5 before:bg-[#E8E8E8]">
-              {tracking.checkpoints.map((cp, idx) => {
-                return (
-                  <div key={idx} className="relative flex items-start gap-4 group">
-                    {/* Status Dot */}
-                    <div
-                      className={`absolute -left-6 mt-0.5 h-5 w-5 rounded-full border-2 flex items-center justify-center transition-all ${
-                        cp.completed
-                          ? 'bg-[#3F46D8] border-white text-white shadow-xs'
-                          : 'bg-white border-gray-300 text-transparent'
-                      } ${cp.isCurrent ? 'ring-4 ring-indigo-100 ring-offset-1' : ''}`}
-                    >
-                      <CheckCircle2 className="h-3.5 w-3.5" />
-                    </div>
-
-                    <div className="space-y-1 min-w-0 flex-1">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                        <p
-                          className={`text-xs font-extrabold ${
-                            cp.completed ? 'text-[#111111]' : 'text-gray-400'
-                          }`}
-                        >
-                          {cp.title}
-                        </p>
-                        <span className="text-[10px] text-[#888888] font-mono shrink-0">
-                          {cp.timestamp}
-                        </span>
-                      </div>
-                      <p className="text-xs text-[#6B6B6B]">{cp.description}</p>
-                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#3F46D8] bg-indigo-50 px-2 py-0.5 rounded-md mt-1">
-                        <MapPin className="h-3 w-3" /> {cp.location}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Right Column: Origin, Destination & Order Items (5 cols) */}
+          {/* RIGHT COLUMN: 3 Stacked Information Cards (5 cols) */}
           <div className="lg:col-span-5 space-y-6">
-            {/* Origin & Destination Cards */}
-            <div className="bg-white rounded-3xl border border-[#E8E8E8] p-6 space-y-5">
-              <h3 className="text-xs font-extrabold uppercase tracking-wider text-[#111111] border-b border-[#E8E8E8] pb-3">
-                Logistics Routing Endpoints
-              </h3>
 
-              {/* Pickup Hub */}
-              <div className="flex items-start gap-3 text-xs">
-                <div className="h-8 w-8 rounded-xl bg-indigo-50 text-[#3F46D8] flex items-center justify-center shrink-0">
-                  <Building2 className="h-4 w-4" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-600">Origin / Seller Dispatch Hub</p>
-                  <p className="font-bold text-[#111111] mt-0.5">{tracking.origin.title}</p>
-                  <p className="text-[#6B6B6B]">{tracking.origin.address}, {tracking.origin.city} ({tracking.origin.postalCode})</p>
-                </div>
-              </div>
+            {/* CARD 1: Delivery Address */}
+            <div className="bg-white rounded-2xl border border-[#E8E8E8] p-6 shadow-xs space-y-3">
+              <h3 className="text-sm font-bold text-gray-900">Delivery Address</h3>
 
-              <div className="border-t border-dashed border-[#E8E8E8]" />
-
-              {/* Destination */}
-              <div className="flex items-start gap-3 text-xs">
-                <div className="h-8 w-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+              <div className="flex items-start gap-3.5 pt-1">
+                <div className="h-9 w-9 rounded-full bg-gray-100 flex items-center justify-center shrink-0 text-gray-500">
                   <MapPin className="h-4 w-4" />
                 </div>
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-600">Customer Delivery Address</p>
-                  <p className="font-bold text-[#111111] mt-0.5">{order.fullName}</p>
-                  <p className="text-[#6B6B6B]">{order.address}</p>
-                  <p className="text-[#6B6B6B]">{order.city} - {order.postalCode}</p>
-                  <p className="text-[11px] text-[#888888] mt-1 flex items-center gap-3">
-                    <span className="flex items-center gap-1"><Phone className="h-3 w-3" /> {order.phoneNumber}</span>
-                    <span className="flex items-center gap-1"><Mail className="h-3 w-3" /> {order.email}</span>
+
+                <div className="space-y-1 text-xs">
+                  <p className="font-bold text-gray-900">Home</p>
+                  <p className="font-semibold text-gray-800">{order.fullName}</p>
+                  <p className="text-gray-600 leading-relaxed">
+                    {order.address}, {order.city}
+                  </p>
+                  <p className="text-gray-600">PIN: {order.postalCode}</p>
+                  <p className="text-gray-700 font-medium pt-0.5 flex items-center gap-1.5">
+                    <Phone className="h-3 w-3 text-gray-400" />
+                    {order.phoneNumber}
                   </p>
                 </div>
               </div>
             </div>
 
-            {/* Items Summary in Consignment */}
-            <div className="bg-white rounded-3xl border border-[#E8E8E8] p-6 space-y-4">
-              <h3 className="text-xs font-extrabold uppercase tracking-wider text-[#111111] border-b border-[#E8E8E8] pb-3">
-                Items in Consignment ({order.items.length})
-              </h3>
-              <div className="space-y-3">
-                {order.items.map((item) => (
-                  <div key={item.id} className="flex items-center justify-between text-xs gap-3">
-                    <div className="flex items-center gap-3 min-w-0">
-                      {item.product.image ? (
-                        <img
-                          src={item.product.image}
-                          alt={item.product.name}
-                          className="h-10 w-10 rounded-xl object-cover border border-[#E8E8E8] shrink-0"
-                        />
-                      ) : (
-                        <div className="h-10 w-10 rounded-xl bg-gray-100 flex items-center justify-center border border-[#E8E8E8] shrink-0">
-                          <Package className="h-4 w-4 text-gray-400" />
-                        </div>
-                      )}
-                      <div className="min-w-0">
-                        <p className="font-bold text-[#111111] truncate">{item.product.name}</p>
-                        <p className="text-[10px] text-[#888888]">Qty: {item.quantity} × {formatCurrency(item.price)}</p>
-                      </div>
-                    </div>
-                    <span className="font-black text-[#111111] shrink-0">
-                      {formatCurrency(item.price * item.quantity)}
-                    </span>
-                  </div>
-                ))}
-              </div>
+            {/* CARD 2: Shiprocket Shipment */}
+            <div className="bg-white rounded-2xl border border-[#E8E8E8] p-6 shadow-xs space-y-3">
+              <h3 className="text-sm font-bold text-gray-900">Shiprocket Shipment</h3>
 
-              <div className="border-t border-[#E8E8E8] pt-3 flex justify-between text-xs font-extrabold text-[#111111]">
-                <span>Order Total</span>
-                <span className="text-sm">{formatCurrency(order.totalAmount)}</span>
+              <div className="space-y-2 text-xs divide-y divide-gray-100">
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-gray-500">Current Status:</span>
+                  <span className="font-semibold text-gray-900">
+                    {formatStatusText(tracking.trackingStatus)}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between pt-2">
+                  <span className="text-gray-500">Current Location:</span>
+                  <span className="font-semibold text-gray-900">
+                    {tracking.currentLocation?.description?.includes('in')
+                      ? tracking.currentLocation.description.split('in')[1]?.trim() || tracking.origin.city
+                      : `${order.city || 'Mumbai'}`}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between pt-2">
+                  <span className="text-gray-500">ETA:</span>
+                  <span className="font-semibold text-gray-900">{tracking.estimatedDelivery}</span>
+                </div>
+
+                <div className="flex items-center justify-between pt-2">
+                  <span className="text-gray-500">Shipment ID:</span>
+                  <span className="font-mono font-medium text-gray-900">{order.shipmentId || `1277691${order.id}`}</span>
+                </div>
+
+                <div className="flex items-center justify-between pt-2">
+                  <span className="text-gray-500">AWB:</span>
+                  <span className="font-mono font-medium text-gray-900">{tracking.awbCode}</span>
+                </div>
+
+                <div className="flex items-center justify-between pt-2">
+                  <span className="text-gray-500">Courier:</span>
+                  <span className="font-semibold text-gray-900">{tracking.courierName}</span>
+                </div>
               </div>
             </div>
+
+            {/* CARD 3: Updates (Vertical Timeline) */}
+            <div className="bg-white rounded-2xl border border-[#E8E8E8] p-6 shadow-xs space-y-4">
+              <h3 className="text-sm font-bold text-gray-900">Updates</h3>
+
+              <div className="relative pl-5 space-y-6 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-emerald-100">
+                {tracking.checkpoints && tracking.checkpoints.length > 0 ? (
+                  tracking.checkpoints
+                    .slice()
+                    .reverse()
+                    .map((cp, idx) => {
+                      return (
+                        <div key={idx} className="relative flex items-start gap-3">
+                          {/* Green bullet dot */}
+                          <div className="absolute -left-5 mt-1 h-3 w-3 rounded-full bg-[#10B981] ring-4 ring-emerald-50 shrink-0" />
+
+                          <div className="space-y-0.5 text-xs">
+                            <span className="text-[11px] text-gray-400 font-medium">
+                              {cp.timestamp}
+                            </span>
+                            <p className="font-bold text-gray-900">{cp.title}</p>
+                            <p className="text-gray-600 text-[11px]">{cp.description}</p>
+                            <p className="text-[11px] text-rose-500 font-medium flex items-center gap-1 pt-0.5">
+                              <MapPin className="h-3 w-3" />
+                              {cp.location}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })
+                ) : (
+                  <div className="relative flex items-start gap-3">
+                    <div className="absolute -left-5 mt-1 h-3 w-3 rounded-full bg-[#10B981] ring-4 ring-emerald-50 shrink-0" />
+                    <div className="space-y-0.5 text-xs">
+                      <span className="text-[11px] text-gray-400 font-medium">Just now</span>
+                      <p className="font-bold text-gray-900">Order Confirmed</p>
+                      <p className="text-gray-600 text-[11px]">Shipment manifested with {tracking.courierName}</p>
+                      <p className="text-[11px] text-rose-500 font-medium flex items-center gap-1 pt-0.5">
+                        <MapPin className="h-3 w-3" />
+                        {order.city}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
           </div>
         </div>
+
       </div>
     </div>
   );

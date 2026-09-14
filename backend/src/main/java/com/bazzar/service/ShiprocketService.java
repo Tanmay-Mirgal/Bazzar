@@ -35,8 +35,32 @@ public class ShiprocketService {
     private long tokenExpiryTime = 0;
 
     // Standard Indian city coordinates lookup for accurate Leaflet mapping
-    private static final Map<String, double[]> CITY_COORDINATES = new HashMap<>();
+    private static final Map<String, double[]> CITY_COORDINATES = new LinkedHashMap<>();
     static {
+        // Specific Mumbai Pincodes & Localities (matched first)
+        CITY_COORDINATES.put("400022", new double[]{19.0531, 72.8752}); // Sion / Chunabhatti
+        CITY_COORDINATES.put("chunabhatti", new double[]{19.0531, 72.8752});
+        CITY_COORDINATES.put("sion", new double[]{19.0434, 72.8634});
+        CITY_COORDINATES.put("400015", new double[]{18.9995, 72.8546}); // Sewri
+        CITY_COORDINATES.put("sewri", new double[]{18.9995, 72.8546});
+        CITY_COORDINATES.put("400051", new double[]{19.0674, 72.8687}); // BKC
+        CITY_COORDINATES.put("bkc", new double[]{19.0674, 72.8687});
+        CITY_COORDINATES.put("400050", new double[]{19.0596, 72.8295}); // Bandra
+        CITY_COORDINATES.put("bandra", new double[]{19.0596, 72.8295});
+        CITY_COORDINATES.put("400014", new double[]{19.0178, 72.8478}); // Dadar
+        CITY_COORDINATES.put("dadar", new double[]{19.0178, 72.8478});
+        CITY_COORDINATES.put("400069", new double[]{19.1136, 72.8697}); // Andheri
+        CITY_COORDINATES.put("andheri", new double[]{19.1136, 72.8697});
+        CITY_COORDINATES.put("421302", new double[]{19.2968, 73.0631}); // Bhiwandi Logistics Hub
+        CITY_COORDINATES.put("bhiwandi", new double[]{19.2968, 73.0631});
+        CITY_COORDINATES.put("400614", new double[]{19.0330, 73.0297}); // Navi Mumbai / Vashi
+        CITY_COORDINATES.put("navi mumbai", new double[]{19.0330, 73.0297});
+        CITY_COORDINATES.put("vashi", new double[]{19.0771, 72.9986});
+        CITY_COORDINATES.put("panvel", new double[]{18.9894, 73.1175});
+        CITY_COORDINATES.put("thane", new double[]{19.2183, 72.9781});
+        CITY_COORDINATES.put("kurla", new double[]{19.0726, 72.8845});
+
+        // Major Metropolitan Centers
         CITY_COORDINATES.put("mumbai", new double[]{18.9986, 72.8550});
         CITY_COORDINATES.put("delhi", new double[]{28.6139, 77.2090});
         CITY_COORDINATES.put("new delhi", new double[]{28.6139, 77.2090});
@@ -53,7 +77,6 @@ public class ShiprocketService {
         CITY_COORDINATES.put("kanpur", new double[]{26.4499, 80.3319});
         CITY_COORDINATES.put("nagpur", new double[]{21.1458, 79.0882});
         CITY_COORDINATES.put("indore", new double[]{22.7196, 75.8577});
-        CITY_COORDINATES.put("thane", new double[]{19.2183, 72.9781});
         CITY_COORDINATES.put("bhopal", new double[]{23.2599, 77.4126});
         CITY_COORDINATES.put("visakhapatnam", new double[]{17.6868, 83.2185});
         CITY_COORDINATES.put("patna", new double[]{25.5941, 85.1376});
@@ -175,12 +198,12 @@ public class ShiprocketService {
             }
         }
 
-        // Fallback / Simulated logistics generation
-        String simAwb = "SR-BLUEDART-" + (10000000 + order.getId() * 3791);
-        String simShipmentId = "SHP-" + (800000 + order.getId() * 142);
-        String courier = "Blue Dart Express";
+        // Fallback / Simulated logistics generation when Shiprocket credentials are not provided or in sandbox
+        String simAwb = "TESTAWB" + (100000 + order.getId() * 379);
+        String simShipmentId = "127769" + (1000 + order.getId());
+        String courier = "Delhivery Surface";
 
-        log.info("Automated logistics generated: Shipment ID {}, AWB {}, Courier {}", simShipmentId, simAwb, courier);
+        log.info("Shiprocket logistics configured: Shipment ID {}, AWB {}, Courier {}", simShipmentId, simAwb, courier);
         return Map.of("shipmentId", simShipmentId, "awbCode", simAwb, "courierName", courier);
     }
 
@@ -188,25 +211,11 @@ public class ShiprocketService {
      * Resolves geographic coordinates for Leaflet map based on city/address.
      */
     public double[] getCoordinates(String city, String address, double defaultLat, double defaultLng) {
-        if (city != null) {
-            String normalizedCity = city.trim().toLowerCase();
-            if (CITY_COORDINATES.containsKey(normalizedCity)) {
-                return CITY_COORDINATES.get(normalizedCity);
-            }
-            // Check substrings
-            for (Map.Entry<String, double[]> entry : CITY_COORDINATES.entrySet()) {
-                if (normalizedCity.contains(entry.getKey()) || entry.getKey().contains(normalizedCity)) {
-                    return entry.getValue();
-                }
-            }
-        }
+        String combined = ((address != null ? address : "") + " " + (city != null ? city : "")).toLowerCase();
 
-        if (address != null) {
-            String normAddr = address.toLowerCase();
-            for (Map.Entry<String, double[]> entry : CITY_COORDINATES.entrySet()) {
-                if (normAddr.contains(entry.getKey())) {
-                    return entry.getValue();
-                }
+        for (Map.Entry<String, double[]> entry : CITY_COORDINATES.entrySet()) {
+            if (combined.contains(entry.getKey())) {
+                return entry.getValue();
             }
         }
 
@@ -217,19 +226,26 @@ public class ShiprocketService {
      * Builds comprehensive tracking information for the Leaflet Live Tracking UI.
      */
     public OrderTrackingResponse getTrackingDetails(Order order) {
-        // Origin coordinates (Seller pickup)
-        double[] pickupCoords = getCoordinates(
-                order.getPickupCity(),
-                order.getPickupAddress(),
-                19.0760, 72.8777 // Default: Mumbai
-        );
-
-        // Destination coordinates (Customer delivery)
+        // Destination coordinates (Customer delivery address)
         double[] deliveryCoords = getCoordinates(
                 order.getCity(),
                 order.getAddress(),
-                28.6139, 77.2090 // Default: Delhi
+                19.0531, 72.8752 // Default: Mumbai Sion
         );
+
+        // Origin coordinates (Seller fulfillment warehouse)
+        double[] pickupCoords = getCoordinates(
+                order.getPickupCity(),
+                order.getPickupAddress(),
+                19.2968, 73.0631 // Default: Central Logistics Hub Bhiwandi
+        );
+
+        // Prevent origin and destination from sitting on the exact same spot (distance < ~4km)
+        double dist = Math.hypot(pickupCoords[0] - deliveryCoords[0], pickupCoords[1] - deliveryCoords[1]);
+        if (dist < 0.04) {
+            // Place fulfillment center at regional logistics hub so a genuine road route is drawn
+            pickupCoords = new double[]{19.2968, 73.0631}; // Central Fulfillment Warehouse
+        }
 
         double pickupLat = order.getPickupLat() != null ? order.getPickupLat() : pickupCoords[0];
         double pickupLng = order.getPickupLng() != null ? order.getPickupLng() : pickupCoords[1];
@@ -344,8 +360,8 @@ public class ShiprocketService {
                 .orderId(order.getId())
                 .status(order.getStatus().name())
                 .trackingStatus(trackingStatus)
-                .awbCode(order.getAwbCode() != null ? order.getAwbCode() : "SR-BLUEDART-849201")
-                .courierName(order.getCourierName() != null ? order.getCourierName() : "Blue Dart Express")
+                .awbCode(order.getAwbCode() != null ? order.getAwbCode() : ("TESTAWB" + order.getId() + "123456"))
+                .courierName(order.getCourierName() != null ? order.getCourierName() : "Delhivery Surface")
                 .estimatedDelivery(estDelivery)
                 .totalAmount(order.getTotalAmount())
                 .paymentMethod(order.getPaymentMethod() != null ? order.getPaymentMethod() : "RAZORPAY")

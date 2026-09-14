@@ -205,6 +205,16 @@ public class SuperAdminService {
     // ── DASHBOARD STATS ──────────────────────────────────────────────────────
 
     public DashboardStatsResponse getPlatformStats() {
+        List<Order> allOrders = orderRepository.findAll();
+        java.math.BigDecimal grossRev = java.math.BigDecimal.ZERO;
+        for (Order o : allOrders) {
+            if (o.getTotalAmount() != null) {
+                grossRev = grossRev.add(o.getTotalAmount());
+            }
+        }
+        java.math.BigDecimal commission = grossRev.multiply(java.math.BigDecimal.valueOf(0.05)).setScale(2, java.math.RoundingMode.HALF_UP);
+        java.math.BigDecimal sellerPayouts = grossRev.subtract(commission).setScale(2, java.math.RoundingMode.HALF_UP);
+
         return DashboardStatsResponse.builder()
                 .totalUsers(userRepository.count())
                 .totalStores(storeRepository.count())
@@ -214,6 +224,9 @@ public class SuperAdminService {
                 .pendingProducts(productRepository.countByStatus(ProductStatus.PENDING))
                 .approvedProducts(productRepository.countByStatus(ProductStatus.APPROVED))
                 .rejectedProducts(productRepository.countByStatus(ProductStatus.REJECTED))
+                .platformTotalRevenue(grossRev)
+                .platformCommissionFee(commission)
+                .platformStorePayouts(sellerPayouts)
                 .build();
     }
 

@@ -28,6 +28,9 @@ interface Stats {
   pendingProducts: number;
   approvedProducts: number;
   rejectedProducts: number;
+  platformTotalRevenue?: number;
+  platformCommissionFee?: number;
+  platformStorePayouts?: number;
 }
 
 export default function SuperAdminDashboard() {
@@ -222,6 +225,50 @@ export default function SuperAdminDashboard() {
           </Button>
         </div>
       )}
+
+      {/* Revenue & 5% / 95% Commission Distribution Banner */}
+      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-6 sm:p-7 text-white shadow-xl border border-indigo-500/20">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="bg-emerald-500/20 text-emerald-300 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider border border-emerald-500/30">
+                Live Financial Distribution
+              </span>
+              <span className="text-xs text-indigo-200/70 font-semibold">5% Platform Cut · 95% Store Payouts</span>
+            </div>
+            <h2 className="text-xl font-extrabold text-white">Platform Revenue & Commission Split</h2>
+            <p className="text-xs text-indigo-200/80 max-w-xl">
+              Automatic revenue distribution model: 5% platform commission retained by Super Admin, 95% net earnings disbursed to store owners.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3 sm:gap-4 w-full md:w-auto shrink-0">
+            <div className="bg-white/10 backdrop-blur-md rounded-xl p-3.5 border border-white/10 text-center">
+              <span className="text-[10px] font-bold text-indigo-200/80 uppercase block">Gross Platform GMV</span>
+              <span className="text-lg font-black text-white">
+                ₹{(stats?.platformTotalRevenue ?? 0).toLocaleString('en-IN')}
+              </span>
+              <span className="text-[10px] text-emerald-400 font-semibold block mt-0.5">100% Volume</span>
+            </div>
+
+            <div className="bg-emerald-500/15 backdrop-blur-md rounded-xl p-3.5 border border-emerald-500/30 text-center">
+              <span className="text-[10px] font-bold text-emerald-300 uppercase block">5% Platform Cut</span>
+              <span className="text-lg font-black text-emerald-400">
+                +₹{(stats?.platformCommissionFee ?? Math.round((stats?.platformTotalRevenue ?? 0) * 0.05)).toLocaleString('en-IN')}
+              </span>
+              <span className="text-[10px] text-emerald-300/80 font-semibold block mt-0.5">Super Admin Share</span>
+            </div>
+
+            <div className="bg-indigo-500/15 backdrop-blur-md rounded-xl p-3.5 border border-indigo-500/30 text-center">
+              <span className="text-[10px] font-bold text-indigo-300 uppercase block">95% Seller Payouts</span>
+              <span className="text-lg font-black text-indigo-300">
+                ₹{(stats?.platformStorePayouts ?? Math.round((stats?.platformTotalRevenue ?? 0) * 0.95)).toLocaleString('en-IN')}
+              </span>
+              <span className="text-[10px] text-indigo-300/80 font-semibold block mt-0.5">To Store Admins</span>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Main Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">

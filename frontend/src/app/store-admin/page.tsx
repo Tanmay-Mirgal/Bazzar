@@ -159,7 +159,8 @@ export default function StoreAdminDashboard() {
 
   // Real data calculations
   const totalRevenue = stats?.myTotalRevenue ?? 0;
-  const netEarnings = Math.round(totalRevenue * 0.95);
+  const platformFee = (stats as any)?.myPlatformFee ?? Math.round(totalRevenue * 0.05);
+  const netEarnings = (stats as any)?.myNetPayout ?? Math.round(totalRevenue * 0.95);
   const totalOrdersCount = stats?.myTotalOrders ?? recentOrders.length;
   const totalCatalogCount = stats?.myProducts ?? recentProducts.length;
   const approvedCount = stats?.myApprovedProducts ?? recentProducts.filter(p => p.status === 'APPROVED').length;
@@ -170,19 +171,19 @@ export default function StoreAdminDashboard() {
     {
       label: 'Gross Sales Revenue',
       value: `₹${totalRevenue.toLocaleString('en-IN')}`,
-      subtext: '5% platform commission',
+      subtext: `₹${platformFee.toLocaleString('en-IN')} (5% Bazzar platform cut)`,
       icon: DollarSign,
       color: 'bg-emerald-50 text-emerald-600',
-      badge: totalRevenue > 0 ? 'Active Sales' : 'Real-time Sync',
+      badge: '100% Volume',
       href: '/store-admin/analytics',
     },
     {
-      label: 'Net Seller Earnings',
+      label: 'Net Seller Payout',
       value: `₹${netEarnings.toLocaleString('en-IN')}`,
-      subtext: 'Your take-home profit',
+      subtext: '95% Take-home earnings',
       icon: CreditCard,
       color: 'bg-indigo-50 text-indigo-600',
-      badge: '95% Payout',
+      badge: '95% Net Payout',
       href: '/store-admin/analytics',
     },
     {

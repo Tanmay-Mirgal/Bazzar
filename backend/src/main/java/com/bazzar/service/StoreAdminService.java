@@ -299,7 +299,8 @@ public class StoreAdminService {
             }
         }
 
-        BigDecimal pendingPayout = totalRev.multiply(BigDecimal.valueOf(0.95)).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal platformFee = totalRev.multiply(BigDecimal.valueOf(0.05)).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal netPayout = totalRev.subtract(platformFee).setScale(2, RoundingMode.HALF_UP);
 
         return DashboardStatsResponse.builder()
                 .myProducts(myProducts)
@@ -309,7 +310,9 @@ public class StoreAdminService {
                 .myTotalOrders(orders.size())
                 .myTotalRevenue(totalRev)
                 .myUnitsSold(totalUnits)
-                .myPendingPayout(pendingPayout)
+                .myPlatformFee(platformFee)
+                .myNetPayout(netPayout)
+                .myPendingPayout(netPayout)
                 .build();
     }
 

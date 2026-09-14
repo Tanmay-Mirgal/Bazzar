@@ -31,7 +31,6 @@ public class StoreAdminService {
     private final CategoryService categoryService;
     private final EmailService emailService;
     private final OrderRepository orderRepository;
-    private final OrderService orderService;
 
     public StoreAdminService(ClerkUserResolver clerkUserResolver,
                               UserRepository userRepository,
@@ -41,8 +40,7 @@ public class StoreAdminService {
                               CategoryRepository categoryRepository,
                               CategoryService categoryService,
                               EmailService emailService,
-                              OrderRepository orderRepository,
-                              OrderService orderService) {
+                              OrderRepository orderRepository) {
         this.clerkUserResolver = clerkUserResolver;
         this.userRepository = userRepository;
         this.applicationRepository = applicationRepository;
@@ -52,7 +50,6 @@ public class StoreAdminService {
         this.categoryService = categoryService;
         this.emailService = emailService;
         this.orderRepository = orderRepository;
-        this.orderService = orderService;
     }
 
     // ── APPLICATION ──────────────────────────────────────────────────────────

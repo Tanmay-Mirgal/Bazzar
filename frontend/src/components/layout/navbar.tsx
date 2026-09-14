@@ -159,7 +159,7 @@ export function Navbar() {
     }
   };
 
-  const navLinks = [
+  const navLinks: Array<{ label: string; href: string }> = [
    
   ];
 

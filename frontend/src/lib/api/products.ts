@@ -1,5 +1,7 @@
-import { ProductFilterParams, PaginatedProductsResponse } from '@/types/product';
+import { ProductFilterParams, PaginatedProductsResponse, Product } from '@/types/product';
 import { apiFetch, apiFetchNoBody } from './client';
+
+export type { Product };
 
 // Backend product response shape
 export interface BackendProduct {
@@ -20,20 +22,6 @@ export interface BackendPageResponse<T> {
   totalPages: number;
   first: boolean;
   last: boolean;
-}
-
-// Normalized frontend product shape
-export interface Product {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  stock: number;
-  category: string;
-  categoryId: number;
-  image: string;
-  rating?: number;
-  featured?: boolean;
 }
 
 function normalize(p: BackendProduct): Product {

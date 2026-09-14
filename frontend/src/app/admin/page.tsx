@@ -83,7 +83,7 @@ export default function AdminDashboardPage() {
           return [] as BackendOrder[];
         }),
       ]);
-      setProducts(prods);
+      setProducts(prods.content);
       setCategories(cats);
       setOrders(ords);
     } catch (err) {

@@ -48,7 +48,7 @@ export default function ProductDetailPage() {
 
         if (item) {
           const allProds = await getProducts({ category: item.category });
-          setRelatedProducts(allProds.filter((p) => p.id !== item.id).slice(0, 4));
+          setRelatedProducts((allProds.content || []).filter((p) => p.id !== item.id).slice(0, 4));
         }
       } catch (err) {
         console.error('Error fetching product detail', err);

@@ -29,6 +29,11 @@ public class OrderRequest {
 
     private String paymentMethod; // "RAZORPAY", "COD"
 
+    private String deliverySpeedTier; // "FLASH_10_MIN", "FAST_20_MIN", "STANDARD_45_MIN", "NATIONAL_COURIER"
+
+    private Double userLat;
+    private Double userLng;
+
     private List<OrderItemPayload> items;
 
     @Data
@@ -37,4 +42,3 @@ public class OrderRequest {
         private Integer quantity;
     }
 }
-

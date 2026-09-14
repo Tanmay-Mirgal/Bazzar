@@ -39,6 +39,29 @@ public class Store {
     @Builder.Default
     private Boolean isActive = true;
 
+    // ── Geolocation & Hyperlocal Delivery Capabilities ────────────────────────
+    @Column(name = "latitude")
+    private Double latitude;
+
+    @Column(name = "longitude")
+    private Double longitude;
+
+    @Column(name = "is_quick_delivery_active")
+    @Builder.Default
+    private Boolean isQuickDeliveryActive = true;
+
+    @Column(name = "store_reliability_score")
+    @Builder.Default
+    private Double storeReliabilityScore = 4.8;
+
+    @Column(name = "preparation_time_mins")
+    @Builder.Default
+    private Integer preparationTimeMins = 3;
+
+    @Column(name = "rider_availability_count")
+    @Builder.Default
+    private Integer riderAvailabilityCount = 5;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -47,6 +70,18 @@ public class Store {
         this.createdAt = LocalDateTime.now();
         if (this.isActive == null) {
             this.isActive = true;
+        }
+        if (this.isQuickDeliveryActive == null) {
+            this.isQuickDeliveryActive = true;
+        }
+        if (this.storeReliabilityScore == null) {
+            this.storeReliabilityScore = 4.8;
+        }
+        if (this.preparationTimeMins == null) {
+            this.preparationTimeMins = 3;
+        }
+        if (this.riderAvailabilityCount == null) {
+            this.riderAvailabilityCount = 5;
         }
     }
 }

@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ShoppingBag, Star, Check, Heart } from 'lucide-react';
+import { ShoppingBag, Star, Check, Heart, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import { Product } from '@/types/product';
 import { useCartStore } from '@/store/cart-store';
@@ -97,6 +97,14 @@ export function ProductCard({ product }: ProductCardProps) {
         >
           <Heart className={`h-4 w-4 ${isLiked ? 'fill-white' : ''}`} />
         </button>
+
+        {/* Hyperlocal Flash 10-MIN Badge Overlay */}
+        {!isOutOfStock && (
+          <div className="absolute top-3 left-3 bg-emerald-600/95 text-white font-bold text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full flex items-center gap-1 shadow-md backdrop-blur-sm tracking-tight">
+            <Zap className="w-3 h-3 fill-white animate-pulse" />
+            10-MIN FLASH
+          </div>
+        )}
 
         {/* Out of Stock Overlay */}
         {isOutOfStock && (

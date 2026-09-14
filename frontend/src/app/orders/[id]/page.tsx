@@ -26,6 +26,7 @@ import {
   Navigation,
   Check,
 } from 'lucide-react';
+import { HyperlocalRadarCard } from '@/components/tracking/hyperlocal-radar-card';
 import dynamic from 'next/dynamic';
 import { toast } from 'sonner';
 
@@ -221,6 +222,9 @@ export default function OrderTrackingPage({ params }: TrackingPageProps) {
             {refreshing ? 'Syncing...' : 'Sync Radar'}
           </Button>
         </div>
+
+        {/* Hyperlocal Concentric Ring Radar Card */}
+        <HyperlocalRadarCard order={order} />
 
         {/* 1. TOP HORIZONTAL STEPPER CARD: "Order Status" */}
         <div className="bg-white rounded-2xl border border-[#E8E8E8] p-6 sm:p-8 shadow-xs">

@@ -9,6 +9,9 @@ export interface PlaceOrderRequest {
   postalCode: string;
   paymentMethod?: string;
   items?: Array<{ productId: number; quantity: number }>;
+  deliverySpeedTier?: string;
+  userLat?: number;
+  userLng?: number;
 }
 
 export interface BackendOrderItem {
@@ -29,7 +32,7 @@ export interface BackendOrderItem {
 export interface BackendOrder {
   id: number;
   totalAmount: number;
-  status: 'PLACED' | 'CONFIRMED' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED';
+  status: 'PLACED' | 'CONFIRMED' | 'PROCESSING' | 'PICKED_UP' | 'OUT_FOR_DELIVERY' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED';
   fullName: string;
   email: string;
   phoneNumber: string;
@@ -38,6 +41,11 @@ export interface BackendOrder {
   postalCode: string;
   items: BackendOrderItem[];
   createdAt: string;
+
+  // Hyperlocal Delivery
+  deliverySpeedTier?: string;
+  deliveryFee?: number;
+  deliveryDeadline?: string;
 
   // Payment
   paymentMethod?: string;

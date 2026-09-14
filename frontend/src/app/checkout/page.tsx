@@ -9,7 +9,9 @@ import {
   verifyRazorpayPayment,
   BackendOrder,
 } from '@/lib/api/orders';
+import { fetchDeliveryEstimate, DeliveryEstimateResponse } from '@/lib/api/hyperlocal';
 import { useCartStore } from '@/store/cart-store';
+import { useUserLocationStore } from '@/store/user-location-store';
 import { getCurrentUser } from '@/lib/api/auth';
 import { formatCurrency } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -28,6 +30,9 @@ import {
   Banknote,
   Sparkles,
   Zap,
+  Clock,
+  Compass,
+  MapPin,
 } from 'lucide-react';
 
 import { useUser } from '@clerk/nextjs';
@@ -47,10 +52,14 @@ export default function CheckoutPage() {
   const { user, isLoaded: userLoaded } = useUser();
   const { getApiToken } = useApiAuth();
   const { cartItems, clearCart, getTotalItems, getTotalPrice } = useCartStore();
+  const { latitude, longitude, locationName, formattedAddress } = useUserLocationStore();
 
   const [mounted, setMounted] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
   const [paymentMethod, setPaymentMethod] = React.useState<'RAZORPAY' | 'COD'>('RAZORPAY');
+
+  const [estimate, setEstimate] = React.useState<DeliveryEstimateResponse | null>(null);
+  const [isEvaluatingEstimate, setIsEvaluatingEstimate] = React.useState(false);
 
   const [formValues, setFormValues] = React.useState<CheckoutFormValues>({
     fullName: '',
@@ -63,15 +72,23 @@ export default function CheckoutPage() {
 
   const [errors, setErrors] = React.useState<Record<string, string>>({});
 
-  // Load Razorpay Script dynamically
+  // Load Razorpay Script & Fill defaults
   React.useEffect(() => {
     setMounted(true);
-    const user = getCurrentUser();
-    if (user) {
+    const authUser = getCurrentUser();
+    if (authUser) {
       setFormValues((prev) => ({
         ...prev,
-        fullName: user.name || '',
-        email: user.email || '',
+        fullName: authUser.name || prev.fullName,
+        email: authUser.email || prev.email,
+      }));
+    }
+
+    if (formattedAddress && !formValues.address) {
+      setFormValues((prev) => ({
+        ...prev,
+        address: formattedAddress,
+        city: locationName.split(',')[0] || 'Mumbai',
       }));
     }
 
@@ -82,7 +99,30 @@ export default function CheckoutPage() {
       script.async = true;
       document.body.appendChild(script);
     }
-  }, []);
+  }, [formattedAddress, locationName]);
+
+  // Fetch Hyperlocal Delivery Estimate on cart or location change
+  React.useEffect(() => {
+    if (cartItems.length === 0) return;
+
+    const userLat = latitude || 19.0760;
+    const userLng = longitude || 72.8777;
+    const pIds = cartItems.map((i) => Number(i.product.id));
+    const qList = cartItems.map((i) => i.quantity);
+    const total = getTotalPrice();
+
+    setIsEvaluatingEstimate(true);
+    fetchDeliveryEstimate(userLat, userLng, pIds, qList, total)
+      .then((res) => {
+        setEstimate(res);
+      })
+      .catch((err) => {
+        console.warn('Delivery estimate failed:', err);
+      })
+      .finally(() => {
+        setIsEvaluatingEstimate(false);
+      });
+  }, [cartItems, latitude, longitude]);
 
   if (!mounted) {
     return (
@@ -97,8 +137,10 @@ export default function CheckoutPage() {
 
   const totalItems = getTotalItems();
   const subtotal = getTotalPrice();
-  const shippingFee = subtotal >= 1499 ? 0 : 99;
-  const grandTotal = subtotal + shippingFee;
+
+  // Delivery Fee calculated by Hyperlocal Engine backend
+  const deliveryFee = estimate ? estimate.deliveryFee : (subtotal >= 1499 ? 0 : 99);
+  const grandTotal = subtotal + deliveryFee;
 
   if (cartItems.length === 0) {
     return (
@@ -152,14 +194,13 @@ export default function CheckoutPage() {
     try {
       const rzpOrder = await createRazorpayOrder(createdOrder.id, grandTotal, token);
 
-      // Check if Razorpay script is loaded in browser
       if (typeof window !== 'undefined' && (window as any).Razorpay) {
         const options = {
           key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || rzpOrder.keyId || 'rzp_test_placeholder',
           amount: rzpOrder.amount,
           currency: rzpOrder.currency || 'INR',
           name: 'Bazzar Marketplace',
-          description: `Order #${createdOrder.id} Payment`,
+          description: `Order #${createdOrder.id} Hyperlocal Delivery`,
           image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=128&q=80',
           order_id: rzpOrder.orderId,
           handler: async function (response: any) {
@@ -173,7 +214,7 @@ export default function CheckoutPage() {
               }, token);
 
               clearCart();
-              toast.success('Payment Verified! Order placed and dispatched.', { id: 'rzp-verify' });
+              toast.success('Payment Verified! Dark store dispatching now.', { id: 'rzp-verify' });
               router.push(`/orders/${createdOrder.id}`);
             } catch (err: any) {
               toast.error(err.message || 'Payment verification failed', { id: 'rzp-verify' });
@@ -186,7 +227,7 @@ export default function CheckoutPage() {
             contact: formValues.phone,
           },
           theme: {
-            color: '#3F46D8',
+            color: '#10B981',
           },
           modal: {
             ondismiss: function () {
@@ -203,7 +244,6 @@ export default function CheckoutPage() {
         });
         rzp.open();
       } else {
-        // Fallback if Razorpay script CDN is blocked
         toast.loading('Processing sandbox payment...', { id: 'rzp-fallback' });
         await verifyRazorpayPayment({
           orderId: createdOrder.id,
@@ -243,6 +283,9 @@ export default function CheckoutPage() {
         token = await getApiToken();
       }
 
+      const userLat = latitude || 19.0760;
+      const userLng = longitude || 72.8777;
+
       const order = await placeOrder({
         fullName: formValues.fullName,
         email: formValues.email,
@@ -251,6 +294,9 @@ export default function CheckoutPage() {
         city: formValues.city,
         postalCode: formValues.postalCode,
         paymentMethod: paymentMethod,
+        deliverySpeedTier: estimate?.tier || 'FLASH_10_MIN',
+        userLat: userLat,
+        userLng: userLng,
         items: cartItems.map((i) => ({
           productId: Number(i.product.id),
           quantity: i.quantity,
@@ -260,7 +306,6 @@ export default function CheckoutPage() {
       if (paymentMethod === 'RAZORPAY') {
         await handleRazorpayFlow(order, token);
       } else {
-        // Cash on Delivery
         clearCart();
         toast.success('Cash on Delivery Order Confirmed!');
         router.push(`/orders/${order.id}`);
@@ -272,18 +317,18 @@ export default function CheckoutPage() {
   };
 
   return (
-    <div className="bg-white text-[#111111] min-h-screen pb-20">
+    <div className="bg-[#F8FAFC] text-slate-900 min-h-screen pb-20">
       {/* Header Banner */}
-      <div className="bg-[#F7F7F5] border-b border-[#E8E8E8] py-8 px-4 sm:px-6 lg:px-8">
+      <div className="bg-slate-900 text-white border-b border-slate-800 py-8 px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-[1440px] flex items-center justify-between">
           <div>
-            <div className="flex items-center gap-2 text-[#3F46D8] text-xs font-bold uppercase tracking-widest mb-1">
-              <Lock className="h-3.5 w-3.5" />
-              Secure 256-Bit SSL Checkout
+            <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold uppercase tracking-widest mb-1">
+              <Zap className="h-4 w-4 fill-emerald-400 animate-pulse" />
+              Hyperlocal 10/15-Minute Express Checkout
             </div>
-            <h1 className="text-3xl font-extrabold text-[#111111] tracking-tight">Express Checkout</h1>
+            <h1 className="text-3xl font-extrabold text-white tracking-tight">Express Checkout</h1>
           </div>
-          <Link href="/cart" className="text-xs font-semibold text-[#6B6B6B] hover:text-[#111111] flex items-center gap-1.5">
+          <Link href="/cart" className="text-xs font-semibold text-slate-400 hover:text-white flex items-center gap-1.5">
             <ArrowLeft className="h-4 w-4" /> Edit Bag
           </Link>
         </div>
@@ -293,29 +338,83 @@ export default function CheckoutPage() {
         <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
           {/* Main Shipping & Payment Form */}
           <div className="lg:col-span-8 space-y-8">
+            
+            {/* HYPERLOCAL SPEED TIER CARD */}
+            <div className="border border-emerald-500/30 bg-gradient-to-r from-slate-900 to-slate-950 text-white p-6 space-y-4 rounded-2xl shadow-xl relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
+              
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div className="flex items-center gap-2 text-emerald-400 font-extrabold text-xs uppercase tracking-wider">
+                  <Compass className="h-4 w-4 text-emerald-400 animate-spin" />
+                  Hyperlocal Radial Spectrum Evaluation
+                </div>
+                {isEvaluatingEstimate ? (
+                  <span className="text-[10px] text-emerald-400 animate-pulse flex items-center gap-1">
+                    Evaluating radial dark store spectrum...
+                  </span>
+                ) : (
+                  <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-mono px-2.5 py-0.5 rounded-full border border-emerald-500/40">
+                    {estimate?.fulfillmentStore ? `Store: ${estimate.fulfillmentStore.storeName} (${estimate.distanceKm.toFixed(1)} km)` : 'Auto-Calculated'}
+                  </span>
+                )}
+              </div>
+
+              {estimate && (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                  <div className="bg-emerald-950/40 border border-emerald-500/40 p-3.5 rounded-xl space-y-1">
+                    <div className="text-[10px] text-emerald-400 font-mono uppercase tracking-wider font-semibold">Active Speed Tier</div>
+                    <div className="text-base font-extrabold text-white flex items-center gap-1.5">
+                      <Zap className="w-4 h-4 fill-emerald-400 text-emerald-400" />
+                      {estimate.tierBadgeText}
+                    </div>
+                    <div className="text-[11px] text-slate-300">{estimate.tierDescription}</div>
+                  </div>
+
+                  <div className="bg-slate-850/60 border border-slate-800 p-3.5 rounded-xl space-y-1">
+                    <div className="text-[10px] text-slate-400 font-mono uppercase tracking-wider font-semibold">Estimated Arrival SLA</div>
+                    <div className="text-base font-extrabold text-emerald-400 flex items-center gap-1.5">
+                      <Clock className="w-4 h-4 text-emerald-400" />
+                      ~{estimate.estimatedDeliveryMins} Minutes
+                    </div>
+                    <div className="text-[11px] text-slate-400">Guaranteed direct delivery deadline</div>
+                  </div>
+
+                  <div className="bg-slate-850/60 border border-slate-800 p-3.5 rounded-xl space-y-1">
+                    <div className="text-[10px] text-slate-400 font-mono uppercase tracking-wider font-semibold">Fulfillment Fee</div>
+                    <div className="text-base font-extrabold text-white">
+                      {estimate.deliveryFee === 0 ? <span className="text-emerald-400">FREE</span> : formatCurrency(estimate.deliveryFee)}
+                    </div>
+                    <div className="text-[11px] text-slate-400">
+                      {estimate.freeDeliveryThreshold > 0 ? `Free delivery over ${formatCurrency(estimate.freeDeliveryThreshold)}` : 'Flat Rate'}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* 1. Shipping Details */}
-            <div className="border border-[#E8E8E8] bg-white p-6 space-y-6 rounded-2xl">
-              <h2 className="text-sm font-extrabold uppercase tracking-wider text-[#111111] border-b border-[#E8E8E8] pb-3 flex items-center gap-2">
-                <Truck className="h-4 w-4 text-[#3F46D8]" /> 1. Shipping &amp; Contact Details
+            <div className="border border-slate-200 bg-white p-6 space-y-6 rounded-2xl shadow-xs">
+              <h2 className="text-sm font-extrabold uppercase tracking-wider text-slate-900 border-b border-slate-100 pb-3 flex items-center gap-2">
+                <Truck className="h-4 w-4 text-emerald-600" /> 1. Shipping &amp; Location Details
               </h2>
 
               <div className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <Label htmlFor="fullName" className="text-xs font-bold text-[#111111]">Full Name *</Label>
+                    <Label htmlFor="fullName" className="text-xs font-bold text-slate-800">Full Name *</Label>
                     <Input
                       id="fullName"
                       name="fullName"
                       value={formValues.fullName}
                       onChange={handleInputChange}
                       placeholder="Tanmay Mirgal"
-                      className="h-10 rounded-xl bg-[#F7F7F5] border-[#E8E8E8] text-xs"
+                      className="h-10 rounded-xl bg-slate-50 border-slate-200 text-xs"
                     />
                     {errors.fullName && <p className="text-[11px] text-rose-600 font-semibold">{errors.fullName}</p>}
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label htmlFor="email" className="text-xs font-bold text-[#111111]">Email Address *</Label>
+                    <Label htmlFor="email" className="text-xs font-bold text-slate-800">Email Address *</Label>
                     <Input
                       id="email"
                       name="email"
@@ -323,61 +422,61 @@ export default function CheckoutPage() {
                       value={formValues.email}
                       onChange={handleInputChange}
                       placeholder="tanmay@example.com"
-                      className="h-10 rounded-xl bg-[#F7F7F5] border-[#E8E8E8] text-xs"
+                      className="h-10 rounded-xl bg-slate-50 border-slate-200 text-xs"
                     />
                     {errors.email && <p className="text-[11px] text-rose-600 font-semibold">{errors.email}</p>}
                   </div>
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="phone" className="text-xs font-bold text-[#111111]">Phone Number *</Label>
+                  <Label htmlFor="phone" className="text-xs font-bold text-slate-800">Phone Number *</Label>
                   <Input
                     id="phone"
                     name="phone"
                     value={formValues.phone}
                     onChange={handleInputChange}
                     placeholder="+91 98765 43210"
-                    className="h-10 rounded-xl bg-[#F7F7F5] border-[#E8E8E8] text-xs"
+                    className="h-10 rounded-xl bg-slate-50 border-slate-200 text-xs"
                   />
                   {errors.phone && <p className="text-[11px] text-rose-600 font-semibold">{errors.phone}</p>}
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="address" className="text-xs font-bold text-[#111111]">Street Address *</Label>
+                  <Label htmlFor="address" className="text-xs font-bold text-slate-800">Street Address *</Label>
                   <Input
                     id="address"
                     name="address"
                     value={formValues.address}
                     onChange={handleInputChange}
-                    placeholder="Flat 506, Sunshine Apts, MG Road"
-                    className="h-10 rounded-xl bg-[#F7F7F5] border-[#E8E8E8] text-xs"
+                    placeholder="Flat 506, Sunshine Apts, BKC Road"
+                    className="h-10 rounded-xl bg-slate-50 border-slate-200 text-xs"
                   />
                   {errors.address && <p className="text-[11px] text-rose-600 font-semibold">{errors.address}</p>}
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <Label htmlFor="city" className="text-xs font-bold text-[#111111]">City / District *</Label>
+                    <Label htmlFor="city" className="text-xs font-bold text-slate-800">City / District *</Label>
                     <Input
                       id="city"
                       name="city"
                       value={formValues.city}
                       onChange={handleInputChange}
                       placeholder="Mumbai"
-                      className="h-10 rounded-xl bg-[#F7F7F5] border-[#E8E8E8] text-xs"
+                      className="h-10 rounded-xl bg-slate-50 border-slate-200 text-xs"
                     />
                     {errors.city && <p className="text-[11px] text-rose-600 font-semibold">{errors.city}</p>}
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label htmlFor="postalCode" className="text-xs font-bold text-[#111111]">Postal Code / Pincode *</Label>
+                    <Label htmlFor="postalCode" className="text-xs font-bold text-slate-800">Postal Code / Pincode *</Label>
                     <Input
                       id="postalCode"
                       name="postalCode"
                       value={formValues.postalCode}
                       onChange={handleInputChange}
-                      placeholder="400015"
-                      className="h-10 rounded-xl bg-[#F7F7F5] border-[#E8E8E8] text-xs"
+                      placeholder="400051"
+                      className="h-10 rounded-xl bg-slate-50 border-slate-200 text-xs"
                     />
                     {errors.postalCode && <p className="text-[11px] text-rose-600 font-semibold">{errors.postalCode}</p>}
                   </div>
@@ -386,9 +485,9 @@ export default function CheckoutPage() {
             </div>
 
             {/* 2. Payment Method Selector */}
-            <div className="border border-[#E8E8E8] bg-white p-6 space-y-4 rounded-2xl">
-              <h2 className="text-sm font-extrabold uppercase tracking-wider text-[#111111] border-b border-[#E8E8E8] pb-3 flex items-center gap-2">
-                <CreditCard className="h-4 w-4 text-[#3F46D8]" /> 2. Select Payment Method
+            <div className="border border-slate-200 bg-white p-6 space-y-4 rounded-2xl shadow-xs">
+              <h2 className="text-sm font-extrabold uppercase tracking-wider text-slate-900 border-b border-slate-100 pb-3 flex items-center gap-2">
+                <CreditCard className="h-4 w-4 text-emerald-600" /> 2. Select Payment Method
               </h2>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
@@ -397,30 +496,30 @@ export default function CheckoutPage() {
                   onClick={() => setPaymentMethod('RAZORPAY')}
                   className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between space-y-3 ${
                     paymentMethod === 'RAZORPAY'
-                      ? 'border-[#3F46D8] bg-[#F7F8FF] shadow-xs'
-                      : 'border-[#E8E8E8] hover:border-gray-300 bg-white'
+                      ? 'border-emerald-600 bg-emerald-50/40 shadow-xs'
+                      : 'border-slate-200 hover:border-slate-300 bg-white'
                   }`}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="h-9 w-9 rounded-xl bg-[#3F46D8] text-white flex items-center justify-center shrink-0 shadow-xs">
-                        <Zap className="h-5 w-5" />
+                      <div className="h-9 w-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                        <Zap className="h-5 w-5 fill-white" />
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <h4 className="text-xs font-black text-[#111111]">Razorpay Gateway</h4>
+                          <h4 className="text-xs font-black text-slate-900">Razorpay Gateway</h4>
                           <span className="text-[9px] font-extrabold uppercase bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded">
                             Instant
                           </span>
                         </div>
-                        <p className="text-[11px] text-[#6B6B6B] mt-0.5">UPI, GPay, Cards, Netbanking</p>
+                        <p className="text-[11px] text-slate-500 mt-0.5">UPI, GPay, Cards, Netbanking</p>
                       </div>
                     </div>
-                    <div className={`h-4 w-4 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'RAZORPAY' ? 'border-[#3F46D8] bg-[#3F46D8]' : 'border-gray-300'}`}>
+                    <div className={`h-4 w-4 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'RAZORPAY' ? 'border-emerald-600 bg-emerald-600' : 'border-slate-300'}`}>
                       {paymentMethod === 'RAZORPAY' && <div className="h-1.5 w-1.5 rounded-full bg-white" />}
                     </div>
                   </div>
-                  <div className="text-[10px] text-[#3F46D8] font-bold flex items-center gap-1 pt-1 border-t border-indigo-100">
+                  <div className="text-[10px] text-emerald-700 font-bold flex items-center gap-1 pt-1 border-t border-emerald-100">
                     <ShieldCheck className="h-3.5 w-3.5" /> 256-bit Bank Grade Encryption
                   </div>
                 </div>
@@ -430,25 +529,25 @@ export default function CheckoutPage() {
                   onClick={() => setPaymentMethod('COD')}
                   className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between space-y-3 ${
                     paymentMethod === 'COD'
-                      ? 'border-[#3F46D8] bg-[#F7F8FF] shadow-xs'
-                      : 'border-[#E8E8E8] hover:border-gray-300 bg-white'
+                      ? 'border-emerald-600 bg-emerald-50/40 shadow-xs'
+                      : 'border-slate-200 hover:border-slate-300 bg-white'
                   }`}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="h-9 w-9 rounded-xl bg-gray-100 text-[#111111] flex items-center justify-center shrink-0">
+                      <div className="h-9 w-9 rounded-xl bg-slate-100 text-slate-900 flex items-center justify-center shrink-0">
                         <Banknote className="h-5 w-5" />
                       </div>
                       <div>
-                        <h4 className="text-xs font-black text-[#111111]">Cash on Delivery (COD)</h4>
-                        <p className="text-[11px] text-[#6B6B6B] mt-0.5">Pay in cash upon delivery</p>
+                        <h4 className="text-xs font-black text-slate-900">Cash on Delivery (COD)</h4>
+                        <p className="text-[11px] text-slate-500 mt-0.5">Pay cash to rider upon delivery</p>
                       </div>
                     </div>
-                    <div className={`h-4 w-4 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'COD' ? 'border-[#3F46D8] bg-[#3F46D8]' : 'border-gray-300'}`}>
+                    <div className={`h-4 w-4 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'COD' ? 'border-emerald-600 bg-emerald-600' : 'border-slate-300'}`}>
                       {paymentMethod === 'COD' && <div className="h-1.5 w-1.5 rounded-full bg-white" />}
                     </div>
                   </div>
-                  <div className="text-[10px] text-[#6B6B6B] font-medium flex items-center gap-1 pt-1 border-t border-gray-100">
+                  <div className="text-[10px] text-slate-500 font-medium flex items-center gap-1 pt-1 border-t border-slate-100">
                     <Truck className="h-3.5 w-3.5" /> Pay courier rider at doorstep
                   </div>
                 </div>
@@ -458,13 +557,14 @@ export default function CheckoutPage() {
 
           {/* Sidebar Bag Summary */}
           <div className="lg:col-span-4 space-y-6">
-            <div className="border border-[#E8E8E8] bg-white p-6 space-y-4 sticky top-24 rounded-2xl shadow-xs">
-              <div className="flex items-center justify-between border-b border-[#E8E8E8] pb-3">
-                <h3 className="text-sm font-extrabold text-[#111111] uppercase tracking-wider">
+            <div className="border border-slate-200 bg-white p-6 space-y-4 sticky top-24 rounded-2xl shadow-xs">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider">
                   Bag Summary ({totalItems})
                 </h3>
-                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
-                  Shiprocket Express
+                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                  <Zap className="w-3 h-3 fill-emerald-700" />
+                  {estimate?.tierBadgeText || 'Hyperlocal'}
                 </span>
               </div>
 
@@ -476,38 +576,38 @@ export default function CheckoutPage() {
                         <img
                           src={item.product.image}
                           alt={item.product.name}
-                          className="h-10 w-10 rounded-lg object-cover border border-[#E8E8E8] shrink-0"
+                          className="h-10 w-10 rounded-lg object-cover border border-slate-200 shrink-0"
                         />
                       ) : (
-                        <div className="h-10 w-10 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
-                          <ShoppingBag className="h-4 w-4 text-gray-400" />
+                        <div className="h-10 w-10 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
+                          <ShoppingBag className="h-4 w-4 text-slate-400" />
                         </div>
                       )}
                       <div className="min-w-0">
-                        <span className="font-bold text-[#111111] line-clamp-1">{item.product.name}</span>
-                        <span className="text-[10px] text-[#888888]">{item.quantity} × {formatCurrency(item.product.price)}</span>
+                        <span className="font-bold text-slate-900 line-clamp-1">{item.product.name}</span>
+                        <span className="text-[10px] text-slate-500">{item.quantity} × {formatCurrency(item.product.price)}</span>
                       </div>
                     </div>
-                    <span className="font-black text-[#111111] shrink-0">
+                    <span className="font-black text-slate-900 shrink-0">
                       {formatCurrency(item.product.price * item.quantity)}
                     </span>
                   </div>
                 ))}
 
-                <div className="border-t border-[#E8E8E8] pt-3 space-y-2 text-[#6B6B6B]">
-                  <div className="flex justify-between text-[#111111]">
+                <div className="border-t border-slate-100 pt-3 space-y-2 text-slate-600">
+                  <div className="flex justify-between text-slate-900">
                     <span>Subtotal</span>
                     <span className="font-bold">{formatCurrency(subtotal)}</span>
                   </div>
-                  <div className="flex justify-between text-[#111111]">
-                    <span>Shipping Fee</span>
+                  <div className="flex justify-between text-slate-900">
+                    <span>Hyperlocal Fulfillment Fee</span>
                     <span className="font-bold text-emerald-600">
-                      {shippingFee === 0 ? 'FREE' : formatCurrency(shippingFee)}
+                      {deliveryFee === 0 ? 'FREE' : formatCurrency(deliveryFee)}
                     </span>
                   </div>
-                  <div className="border-t border-[#E8E8E8] pt-3 flex justify-between text-sm font-extrabold text-[#111111]">
+                  <div className="border-t border-slate-100 pt-3 flex justify-between text-sm font-extrabold text-slate-900">
                     <span>Total Pay</span>
-                    <span className="text-xl text-[#3F46D8]">{formatCurrency(grandTotal)}</span>
+                    <span className="text-xl text-emerald-600">{formatCurrency(grandTotal)}</span>
                   </div>
                 </div>
               </div>
@@ -515,12 +615,12 @@ export default function CheckoutPage() {
               <Button
                 type="submit"
                 disabled={isLoading}
-                className="w-full h-12 rounded-xl bg-[#111111] hover:bg-[#3F46D8] text-white font-bold text-xs uppercase tracking-wider transition-colors shadow-md"
+                className="w-full h-12 rounded-xl bg-slate-900 hover:bg-emerald-600 text-white font-bold text-xs uppercase tracking-wider transition-colors shadow-md"
               >
                 {isLoading ? (
                   <span className="flex items-center gap-2">
                     <span className="h-4 w-4 border-2 border-white border-t-transparent animate-spin rounded-full" />
-                    Processing Payment...
+                    Dispatching Order...
                   </span>
                 ) : (
                   <span className="flex items-center justify-center gap-2">
@@ -531,9 +631,9 @@ export default function CheckoutPage() {
               </Button>
 
               <div className="pt-1 text-center">
-                <p className="text-[10px] text-[#888888] flex items-center justify-center gap-1">
+                <p className="text-[10px] text-slate-500 flex items-center justify-center gap-1">
                   <ShieldCheck className="h-3 w-3 text-emerald-600" />
-                  Live Shiprocket tracking link provided on checkout
+                  Live Hyperlocal Radar Tracking provided after checkout
                 </p>
               </div>
             </div>

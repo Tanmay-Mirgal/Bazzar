@@ -3,9 +3,11 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { ShoppingBag, Search, Menu, Heart, ShieldCheck, Store, ChevronRight, X, Loader2, Clock, AlertCircle, FileText, Package } from 'lucide-react';
+import { ShoppingBag, Search, Menu, Heart, ShieldCheck, Store, ChevronRight, X, Loader2, Clock, AlertCircle, FileText, Package, MapPin, Zap, ChevronDown } from 'lucide-react';
 import { useCartStore } from '@/store/cart-store';
 import { useWishlistStore } from '@/store/wishlist-store';
+import { useUserLocationStore } from '@/store/user-location-store';
+import { LocationModal } from './location-modal';
 import { getProducts } from '@/lib/api/products';
 import { Product } from '@/types/product';
 import { formatCurrency } from '@/lib/utils';
@@ -32,9 +34,12 @@ export function Navbar() {
   const [isSearching, setIsSearching] = React.useState(false);
   const [showSearchResults, setShowSearchResults] = React.useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+  const [isLocationModalOpen, setIsLocationModalOpen] = React.useState(false);
   const [mounted, setMounted] = React.useState(false);
   const [dbRole, setDbRole] = React.useState<string | null>(null);
   const [appStatus, setAppStatus] = React.useState<'PENDING' | 'APPROVED' | 'REJECTED' | null>(null);
+
+  const { locationName } = useUserLocationStore();
 
   const searchContainerRef = React.useRef<HTMLDivElement>(null);
 
@@ -236,7 +241,7 @@ export function Navbar() {
         <div className="flex h-16 items-center justify-between gap-6">
           {/* Logo & Navigation Links */}
           <div className="flex items-center gap-10">
-            <Link href="/" className="flex items-center gap-2.5 group">
+            <Link href="/" className="flex items-center gap-2.5 group shrink-0">
               <img
                 src="/logo.png"
                 alt="Bazzar Logo"
@@ -246,6 +251,25 @@ export function Navbar() {
                 BAZZAR
               </span>
             </Link>
+
+            {/* Hyperlocal Delivery Location Selector Button */}
+            <button
+              onClick={() => setIsLocationModalOpen(true)}
+              className="hidden md:flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-emerald-50/90 hover:bg-emerald-100/90 text-emerald-950 transition-all border border-emerald-200/80 text-xs shadow-2xs group cursor-pointer"
+            >
+              <div className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                <Zap className="w-3.5 h-3.5 fill-white animate-pulse" />
+              </div>
+              <div className="text-left line-clamp-1">
+                <span className="text-[9px] text-emerald-800/80 block font-bold uppercase tracking-wider leading-none">
+                  Express Delivery to
+                </span>
+                <span className="font-extrabold text-emerald-950 flex items-center gap-1 text-xs leading-tight">
+                  {locationName || 'Select Location'}
+                  <ChevronDown className="w-3 h-3 text-emerald-700 group-hover:translate-y-0.5 transition-transform" />
+                </span>
+              </div>
+            </button>
 
             <nav className="hidden lg:flex items-center gap-6 text-xs font-semibold tracking-wide text-[#6B6B6B]">
               {navLinks.map((link) => {
@@ -450,6 +474,10 @@ export function Navbar() {
           </div>
         </div>
       </div>
+      <LocationModal
+        isOpen={isLocationModalOpen}
+        onClose={() => setIsLocationModalOpen(false)}
+      />
     </header>
   );
 }

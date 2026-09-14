@@ -78,6 +78,31 @@ shiprocket:
   email: ${SHIPROCKET_EMAIL:}
   password: ${SHIPROCKET_PASSWORD:}
 
+# Hyperlocal Quick Commerce Configuration
+hyperlocal:
+  flash:
+    radius-km: 2.0
+    fee: 29
+    target-minutes: 10
+    prep-minutes: 3
+  fast:
+    radius-km: 5.0
+    fee: 19
+    target-minutes: 20
+    prep-minutes: 4
+  standard:
+    radius-km: 10.0
+    fee: 9
+    free-threshold: 499
+    target-minutes: 45
+    prep-minutes: 5
+  weights:
+    distance: 0.30
+    stock: 0.25
+    eta: 0.25
+    rider: 0.10
+    reliability: 0.10
+
 logging:
   level:
     com.bazzar: INFO

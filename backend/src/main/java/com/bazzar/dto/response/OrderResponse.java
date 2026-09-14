@@ -1,5 +1,6 @@
 package com.bazzar.dto.response;
 
+import com.bazzar.entity.DeliverySpeedTier;
 import com.bazzar.entity.OrderStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -25,6 +26,11 @@ public class OrderResponse {
     private String postalCode;
     private List<OrderItemResponse> items;
     private LocalDateTime createdAt;
+
+    // Hyperlocal Delivery Tier & Deadline Info
+    private DeliverySpeedTier deliverySpeedTier;
+    private BigDecimal deliveryFee;
+    private LocalDateTime deliveryDeadline;
 
     // Payment Info
     private String paymentMethod;

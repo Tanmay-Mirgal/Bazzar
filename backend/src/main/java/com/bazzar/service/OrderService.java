@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -32,14 +33,18 @@ public class OrderService {
     private final StoreAdminApplicationRepository applicationRepository;
     private final ShiprocketService shiprocketService;
     private final EmailService emailService;
+    private final HyperlocalService hyperlocalService;
+    private final DeliveryFeeService feeService;
 
     public OrderService(OrderRepository orderRepository,
                         CartRepository cartRepository,
                         ProductRepository productRepository,
-                        ProductService productService,
+                        @org.springframework.context.annotation.Lazy ProductService productService,
                         StoreAdminApplicationRepository applicationRepository,
                         ShiprocketService shiprocketService,
-                        EmailService emailService) {
+                        EmailService emailService,
+                        HyperlocalService hyperlocalService,
+                        DeliveryFeeService feeService) {
         this.orderRepository = orderRepository;
         this.cartRepository = cartRepository;
         this.productRepository = productRepository;
@@ -47,6 +52,8 @@ public class OrderService {
         this.applicationRepository = applicationRepository;
         this.shiprocketService = shiprocketService;
         this.emailService = emailService;
+        this.hyperlocalService = hyperlocalService;
+        this.feeService = feeService;
     }
 
     private static class CartItemData {
@@ -143,6 +150,18 @@ public class OrderService {
                         .multiply(BigDecimal.valueOf(item.getQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
+        // Evaluate Hyperlocal Delivery Tier and Recalculate Delivery Fee on Server
+        List<Long> pIds = itemsToProcess.stream().map(i -> i.getProduct().getId()).collect(Collectors.toList());
+        List<Integer> qList = itemsToProcess.stream().map(CartItemData::getQuantity).collect(Collectors.toList());
+
+        com.bazzar.dto.hyperlocal.DeliveryEstimateResponse estimate = hyperlocalService.getDeliveryEstimate(
+                request.getUserLat(), request.getUserLng(), pIds, qList, totalAmount);
+
+        DeliverySpeedTier speedTier = estimate.getTier();
+        BigDecimal deliveryFee = feeService.calculateFee(speedTier, totalAmount);
+        BigDecimal grandTotal = totalAmount.add(deliveryFee);
+        LocalDateTime deadline = estimate.getDeliveryDeadline();
+
         String paymentMethod = (request.getPaymentMethod() != null && !request.getPaymentMethod().isBlank())
                 ? request.getPaymentMethod().toUpperCase()
                 : "RAZORPAY";
@@ -154,7 +173,7 @@ public class OrderService {
         // Create order
         Order order = Order.builder()
                 .user(user)
-                .totalAmount(totalAmount)
+                .totalAmount(grandTotal)
                 .status(initialStatus)
                 .fullName(request.getFullName())
                 .email(request.getEmail())
@@ -162,6 +181,9 @@ public class OrderService {
                 .address(request.getAddress())
                 .city(request.getCity())
                 .postalCode(request.getPostalCode())
+                .deliverySpeedTier(speedTier)
+                .deliveryFee(deliveryFee)
+                .deliveryDeadline(deadline)
                 .paymentMethod(paymentMethod)
                 .paymentStatus(initialPaymentStatus)
                 .trackingStatus(initialTracking)
@@ -327,6 +349,9 @@ public class OrderService {
                 .pickupLng(order.getPickupLng())
                 .deliveryLat(order.getDeliveryLat())
                 .deliveryLng(order.getDeliveryLng())
+                .deliverySpeedTier(order.getDeliverySpeedTier())
+                .deliveryFee(order.getDeliveryFee())
+                .deliveryDeadline(order.getDeliveryDeadline())
                 .items(itemResponses)
                 .createdAt(order.getCreatedAt())
                 .build();

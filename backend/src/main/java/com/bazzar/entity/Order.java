@@ -49,6 +49,24 @@ public class Order {
     @Column(name = "postal_code", nullable = false)
     private String postalCode;
 
+    // ── Hyperlocal Delivery Tier & Authoritative Deadline ────────────────────
+    @Enumerated(EnumType.STRING)
+    @Column(name = "delivery_speed_tier")
+    private DeliverySpeedTier deliverySpeedTier;
+
+    @Column(name = "delivery_fee", precision = 10, scale = 2)
+    private BigDecimal deliveryFee;
+
+    @Column(name = "delivery_deadline")
+    private LocalDateTime deliveryDeadline;
+
+    @Column(name = "fulfillment_score")
+    private Double fulfillmentScore;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "assigned_store_id")
+    private Store assignedStore;
+
     // ── Payment Details (Razorpay / COD) ─────────────────────────────────────
     @Column(name = "payment_method")
     private String paymentMethod; // "RAZORPAY", "COD"
@@ -119,6 +137,9 @@ public class Order {
         }
         if (this.trackingStatus == null) {
             this.trackingStatus = "PLACED";
+        }
+        if (this.deliverySpeedTier == null) {
+            this.deliverySpeedTier = DeliverySpeedTier.STANDARD_45_MIN;
         }
     }
 }

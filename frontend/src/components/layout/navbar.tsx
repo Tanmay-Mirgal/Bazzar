@@ -121,8 +121,9 @@ export function Navbar() {
     const timer = setTimeout(async () => {
       setIsSearching(true);
       try {
-        const results = await getProducts({ search: searchQuery.trim() });
-        setSearchResults(results.slice(0, 5));
+        const res = await getProducts({ search: searchQuery.trim(), size: 8 });
+        const items = res?.content || [];
+        setSearchResults(items.slice(0, 6));
         setShowSearchResults(true);
       } catch (err) {
         console.error('Search query failed:', err);
@@ -250,29 +251,26 @@ export function Navbar() {
             {/* Hyperlocal Delivery Location Selector Button (Blinkit-Style) */}
             <button
               onClick={() => setIsLocationModalOpen(true)}
-              className="flex items-center gap-2.5 px-3 py-1.5 rounded-2xl bg-emerald-50/90 hover:bg-emerald-100/90 text-emerald-950 transition-all border border-emerald-200/80 text-xs shadow-2xs group cursor-pointer max-w-[280px] md:max-w-[420px]"
+              className="flex items-center gap-2.5 px-3 py-1.5 rounded-2xl bg-[#F9F9F8] hover:bg-[#F2F2F0] text-gray-900 transition-all border border-gray-200/90 text-xs shadow-2xs group cursor-pointer max-w-[280px] sm:max-w-[340px] md:max-w-[420px]"
               title="Click to change delivery location"
             >
-              <div className="w-7 h-7 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
-                <Zap className="w-4 h-4 fill-white animate-pulse" />
-              </div>
-              <div className="text-left min-w-0 flex-1">
-                <div className="flex items-center gap-1">
-                  <span className="text-[10px] text-emerald-800 font-extrabold uppercase tracking-wider leading-none">
-                    Delivery in 10-15 mins
-                  </span>
+              <div className="flex flex-col items-center justify-center bg-[#111111] text-amber-400 px-2 py-1 rounded-xl shrink-0 border border-amber-400/20 shadow-xs">
+                <div className="flex items-center gap-1 font-black text-[10px] tracking-wider uppercase leading-none">
+                  <Zap className="w-3 h-3 fill-amber-400 text-amber-400 animate-pulse" />
+                  <span className="text-amber-400">10 MINS</span>
                 </div>
-                <div className="font-extrabold text-emerald-950 flex items-center gap-1 text-xs leading-snug mt-0.5 min-w-0">
-                  <span className="truncate max-w-[130px] md:max-w-[170px]">
+              </div>
+
+              <div className="text-left min-w-0 flex-1">
+                <div className="flex items-center gap-1 text-xs font-black text-[#111111] leading-tight">
+                  <span className="truncate max-w-[130px] sm:max-w-[170px]">
                     {mounted ? (locationName || 'Select Location') : 'BKC, Mumbai'}
                   </span>
-                  {mounted && formattedAddress && (
-                    <span className="text-[11px] font-medium text-emerald-800/80 truncate hidden md:inline max-w-[180px]">
-                      - {formattedAddress}
-                    </span>
-                  )}
-                  <ChevronDown className="w-3.5 h-3.5 text-emerald-700 group-hover:translate-y-0.5 transition-transform shrink-0" />
+                  <ChevronDown className="w-3.5 h-3.5 text-[#111111] group-hover:translate-y-0.5 transition-transform shrink-0" />
                 </div>
+                <p className="text-[11px] font-medium text-[#6B6B6B] truncate max-w-[150px] sm:max-w-[240px] leading-tight mt-0.5">
+                  {mounted && formattedAddress ? formattedAddress : 'Bandra Kurla Complex, Mumbai'}
+                </p>
               </div>
             </button>
 

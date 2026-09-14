@@ -25,11 +25,11 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     List<Product> findByNameContainingIgnoreCaseOrDescriptionContainingIgnoreCaseAndStatus(
             String name, String description, ProductStatus status);
 
-    @Query("SELECT p FROM Product p WHERE (LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(p.description) LIKE LOWER(CONCAT('%', :search, '%'))) AND p.status = :status")
+    @Query("SELECT p FROM Product p WHERE (LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(p.description) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(p.category.name) LIKE LOWER(CONCAT('%', :search, '%'))) AND p.status = :status")
     Page<Product> findBySearchAndStatus(@Param("search") String search, @Param("status") ProductStatus status, Pageable pageable);
 
     @Query("SELECT p FROM Product p WHERE LOWER(p.category.name) = LOWER(:category) AND " +
-           "(LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(p.description) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+           "(LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(p.description) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(p.category.name) LIKE LOWER(CONCAT('%', :search, '%'))) " +
            "AND p.status = :status")
     List<Product> findByCategoryNameIgnoreCaseAndSearchAndStatus(
             @Param("category") String category,
@@ -37,7 +37,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             @Param("status") ProductStatus status);
 
     @Query("SELECT p FROM Product p WHERE LOWER(p.category.name) = LOWER(:category) AND " +
-           "(LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(p.description) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+           "(LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(p.description) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(p.category.name) LIKE LOWER(CONCAT('%', :search, '%'))) " +
            "AND p.status = :status")
     Page<Product> findByCategoryNameIgnoreCaseAndSearchAndStatus(
             @Param("category") String category,

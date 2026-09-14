@@ -17,4 +17,17 @@ export interface ProductFilterParams {
   minPrice?: number;
   maxPrice?: number;
   sortBy?: 'price-asc' | 'price-desc' | 'name' | 'newest';
+  page?: number;
+  size?: number;
+  sortDir?: 'asc' | 'desc';
+}
+
+export interface PaginatedProductsResponse {
+  content: Product[];
+  pageNumber: number;
+  pageSize: number;
+  totalElements: number;
+  totalPages: number;
+  first: boolean;
+  last: boolean;
 }

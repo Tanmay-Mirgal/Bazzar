@@ -1,6 +1,7 @@
 package com.bazzar.controller;
 
 import com.bazzar.dto.request.ProductRequest;
+import com.bazzar.dto.response.PageResponse;
 import com.bazzar.dto.response.ProductResponse;
 import com.bazzar.service.ProductService;
 import jakarta.validation.Valid;
@@ -21,10 +22,14 @@ public class ProductController {
     }
 
     @GetMapping
-    public ResponseEntity<List<ProductResponse>> getAllProducts(
+    public ResponseEntity<PageResponse<ProductResponse>> getAllProducts(
             @RequestParam(required = false) String search,
-            @RequestParam(required = false) String category) {
-        return ResponseEntity.ok(productService.getAllProducts(search, category));
+            @RequestParam(required = false) String category,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "12") int size,
+            @RequestParam(defaultValue = "id") String sortBy,
+            @RequestParam(defaultValue = "asc") String sortDir) {
+        return ResponseEntity.ok(productService.getPaginatedProducts(search, category, page, size, sortBy, sortDir));
     }
 
     @GetMapping("/{id}")

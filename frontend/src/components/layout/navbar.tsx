@@ -39,7 +39,7 @@ export function Navbar() {
   const [dbRole, setDbRole] = React.useState<string | null>(null);
   const [appStatus, setAppStatus] = React.useState<'PENDING' | 'APPROVED' | 'REJECTED' | null>(null);
 
-  const { locationName } = useUserLocationStore();
+  const { locationName, formattedAddress } = useUserLocationStore();
 
   const searchContainerRef = React.useRef<HTMLDivElement>(null);
 
@@ -159,12 +159,7 @@ export function Navbar() {
   };
 
   const navLinks = [
-    { href: '/', label: 'Home' },
-    { href: '/products', label: 'All Catalog' },
-    { href: '/products?category=Electronics', label: 'Electronics' },
-    { href: '/products?category=Footwear', label: 'Footwear' },
-    { href: '/products?category=Apparel', label: 'Apparel' },
-    { href: '/products?category=Accessories', label: 'Accessories' },
+   
   ];
 
   const isAdmin = isSuperAdmin;
@@ -252,22 +247,32 @@ export function Navbar() {
               </span>
             </Link>
 
-            {/* Hyperlocal Delivery Location Selector Button */}
+            {/* Hyperlocal Delivery Location Selector Button (Blinkit-Style) */}
             <button
               onClick={() => setIsLocationModalOpen(true)}
-              className="hidden md:flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-emerald-50/90 hover:bg-emerald-100/90 text-emerald-950 transition-all border border-emerald-200/80 text-xs shadow-2xs group cursor-pointer"
+              className="flex items-center gap-2.5 px-3 py-1.5 rounded-2xl bg-emerald-50/90 hover:bg-emerald-100/90 text-emerald-950 transition-all border border-emerald-200/80 text-xs shadow-2xs group cursor-pointer max-w-[280px] md:max-w-[420px]"
+              title="Click to change delivery location"
             >
-              <div className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
-                <Zap className="w-3.5 h-3.5 fill-white animate-pulse" />
+              <div className="w-7 h-7 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                <Zap className="w-4 h-4 fill-white animate-pulse" />
               </div>
-              <div className="text-left line-clamp-1">
-                <span className="text-[9px] text-emerald-800/80 block font-bold uppercase tracking-wider leading-none">
-                  Express Delivery to
-                </span>
-                <span className="font-extrabold text-emerald-950 flex items-center gap-1 text-xs leading-tight">
-                  {locationName || 'Select Location'}
-                  <ChevronDown className="w-3 h-3 text-emerald-700 group-hover:translate-y-0.5 transition-transform" />
-                </span>
+              <div className="text-left min-w-0 flex-1">
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] text-emerald-800 font-extrabold uppercase tracking-wider leading-none">
+                    Delivery in 10-15 mins
+                  </span>
+                </div>
+                <div className="font-extrabold text-emerald-950 flex items-center gap-1 text-xs leading-snug mt-0.5 min-w-0">
+                  <span className="truncate max-w-[130px] md:max-w-[170px]">
+                    {mounted ? (locationName || 'Select Location') : 'BKC, Mumbai'}
+                  </span>
+                  {mounted && formattedAddress && (
+                    <span className="text-[11px] font-medium text-emerald-800/80 truncate hidden md:inline max-w-[180px]">
+                      - {formattedAddress}
+                    </span>
+                  )}
+                  <ChevronDown className="w-3.5 h-3.5 text-emerald-700 group-hover:translate-y-0.5 transition-transform shrink-0" />
+                </div>
               </div>
             </button>
 

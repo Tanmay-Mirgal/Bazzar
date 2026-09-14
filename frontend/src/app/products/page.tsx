@@ -9,7 +9,7 @@ import { Category } from '@/types/category';
 import { ProductGrid } from '@/components/product/product-grid';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { SlidersHorizontal, Search, X, Check } from 'lucide-react';
+import { SlidersHorizontal, Search, X, Check, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 function ProductsContent() {
@@ -18,6 +18,7 @@ function ProductsContent() {
 
   const initialCategory = searchParams.get('category') || 'all';
   const initialSearch = searchParams.get('search') || '';
+  const initialPage = Math.max(0, parseInt(searchParams.get('page') || '0', 10));
 
   const [products, setProducts] = React.useState<Product[]>([]);
   const [categories, setCategories] = React.useState<Category[]>([]);
@@ -25,6 +26,12 @@ function ProductsContent() {
   const [searchQuery, setSearchQuery] = React.useState<string>(initialSearch);
   const [sortBy, setSortBy] = React.useState<string>('newest');
   const [isLoading, setIsLoading] = React.useState<boolean>(true);
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = React.useState<number>(initialPage);
+  const [pageSize, setPageSize] = React.useState<number>(12);
+  const [totalElements, setTotalElements] = React.useState<number>(0);
+  const [totalPages, setTotalPages] = React.useState<number>(1);
 
   React.useEffect(() => {
     async function loadCategories() {
@@ -41,18 +48,26 @@ function ProductsContent() {
   React.useEffect(() => {
     setSelectedCategory(searchParams.get('category') || 'all');
     setSearchQuery(searchParams.get('search') || '');
+    const p = searchParams.get('page');
+    if (p !== null) {
+      setCurrentPage(Math.max(0, parseInt(p, 10)));
+    }
   }, [searchParams]);
 
   React.useEffect(() => {
     async function fetchFilteredProducts() {
       setIsLoading(true);
       try {
-        const data = await getProducts({
+        const res = await getProducts({
           category: selectedCategory,
           search: searchQuery,
           sortBy: sortBy as any,
+          page: currentPage,
+          size: pageSize,
         });
-        setProducts(data);
+        setProducts(res.content);
+        setTotalElements(res.totalElements);
+        setTotalPages(res.totalPages);
       } catch (err) {
         console.error('Failed to fetch products', err);
       } finally {
@@ -60,32 +75,70 @@ function ProductsContent() {
       }
     }
     fetchFilteredProducts();
-  }, [selectedCategory, searchQuery, sortBy]);
+  }, [selectedCategory, searchQuery, sortBy, currentPage, pageSize]);
 
-  const updateUrlParams = (cat: string, search: string) => {
+  const updateUrlParams = (cat: string, search: string, page: number = 0) => {
     const params = new URLSearchParams();
     if (cat && cat !== 'all') params.set('category', cat);
     if (search && search.trim() !== '') params.set('search', search.trim());
+    if (page > 0) params.set('page', String(page));
     router.push(`/products${params.toString() ? `?${params.toString()}` : ''}`);
   };
 
   const handleCategoryChange = (categoryName: string) => {
     setSelectedCategory(categoryName);
-    updateUrlParams(categoryName, searchQuery);
+    setCurrentPage(0);
+    updateUrlParams(categoryName, searchQuery, 0);
   };
 
   const handleSearchChange = (query: string) => {
     setSearchQuery(query);
-    updateUrlParams(selectedCategory, query);
+    setCurrentPage(0);
+    updateUrlParams(selectedCategory, query, 0);
+  };
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage < 0 || newPage >= totalPages) return;
+    setCurrentPage(newPage);
+    updateUrlParams(selectedCategory, searchQuery, newPage);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handlePageSizeChange = (newSize: string) => {
+    const size = parseInt(newSize, 10);
+    setPageSize(size);
+    setCurrentPage(0);
+    updateUrlParams(selectedCategory, searchQuery, 0);
   };
 
   const clearFilters = () => {
     setSearchQuery('');
     setSelectedCategory('all');
+    setCurrentPage(0);
     router.push('/products');
   };
 
-  const hasActiveFilters = searchQuery.trim() !== '' || (selectedCategory !== 'all');
+  const hasActiveFilters = searchQuery.trim() !== '' || selectedCategory !== 'all';
+
+  // Calculate pagination page numbers range for UI
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxButtons = 5;
+    let start = Math.max(0, currentPage - Math.floor(maxButtons / 2));
+    let end = Math.min(totalPages, start + maxButtons);
+
+    if (end - start < maxButtons) {
+      start = Math.max(0, end - maxButtons);
+    }
+
+    for (let i = start; i < end; i++) {
+      pages.push(i);
+    }
+    return pages;
+  };
+
+  const startItem = totalElements === 0 ? 0 : currentPage * pageSize + 1;
+  const endItem = Math.min((currentPage + 1) * pageSize, totalElements);
 
   return (
     <div className="min-h-screen bg-white text-[#111111] pb-20">
@@ -99,24 +152,42 @@ function ProductsContent() {
                 {selectedCategory !== 'all' ? `${selectedCategory}` : 'All Products'}
               </h1>
               <p className="text-xs text-[#6B6B6B] mt-1">
-                {isLoading ? 'Loading catalog...' : `${products.length} product${products.length === 1 ? '' : 's'} listed`}
+                {isLoading
+                  ? 'Loading catalog...'
+                  : `${totalElements} products available • Showing ${startItem}–${endItem}`}
               </p>
             </div>
 
-            {/* Sort Controls */}
-            <div className="flex items-center gap-2">
-              <SlidersHorizontal className="h-4 w-4 text-[#6B6B6B]" />
-              <Select value={sortBy} onValueChange={(val) => setSortBy(val)}>
-                <SelectTrigger className="w-48 h-9 text-xs bg-white border-[#E8E8E8] text-[#111111] rounded-none">
-                  <SelectValue placeholder="Sort by" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="newest">Featured / Newest</SelectItem>
-                  <SelectItem value="price-asc">Price: Low to High</SelectItem>
-                  <SelectItem value="price-desc">Price: High to Low</SelectItem>
-                  <SelectItem value="name">Name: A to Z</SelectItem>
-                </SelectContent>
-              </Select>
+            {/* Sort Controls & Page Size */}
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2">
+                <SlidersHorizontal className="h-4 w-4 text-[#6B6B6B]" />
+                <Select value={sortBy} onValueChange={(val) => setSortBy(val)}>
+                  <SelectTrigger className="w-44 h-9 text-xs bg-white border-[#E8E8E8] text-[#111111] rounded-none">
+                    <SelectValue placeholder="Sort by" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="newest">Featured / Newest</SelectItem>
+                    <SelectItem value="price-asc">Price: Low to High</SelectItem>
+                    <SelectItem value="price-desc">Price: High to Low</SelectItem>
+                    <SelectItem value="name">Name: A to Z</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-[#6B6B6B]">Per page:</span>
+                <Select value={String(pageSize)} onValueChange={handlePageSizeChange}>
+                  <SelectTrigger className="w-20 h-9 text-xs bg-white border-[#E8E8E8] text-[#111111] rounded-none">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="12">12</SelectItem>
+                    <SelectItem value="24">24</SelectItem>
+                    <SelectItem value="48">48</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
         </div>
@@ -202,9 +273,53 @@ function ProductsContent() {
             )}
           </div>
 
-          {/* Right Product Grid */}
-          <div className="lg:col-span-9">
+          {/* Right Product Grid & Pagination */}
+          <div className="lg:col-span-9 space-y-8">
             <ProductGrid products={products} isLoading={isLoading} />
+
+            {/* Pagination Controls */}
+            {!isLoading && totalPages > 1 && (
+              <div className="pt-6 border-t border-[#E8E8E8] flex flex-col sm:flex-row items-center justify-between gap-4">
+                <span className="text-xs text-[#6B6B6B]">
+                  Showing <strong className="text-[#111111]">{startItem}–{endItem}</strong> of <strong className="text-[#111111]">{totalElements}</strong> items
+                </span>
+
+                <div className="flex items-center gap-1">
+                  {/* Previous Button */}
+                  <button
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 0}
+                    className="flex items-center justify-center h-9 px-3 text-xs font-semibold border border-[#E8E8E8] bg-white text-[#111111] hover:bg-[#F7F7F5] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                  >
+                    <ChevronLeft className="h-4 w-4 mr-1" /> Prev
+                  </button>
+
+                  {/* Page Numbers */}
+                  {getPageNumbers().map((pageNum) => (
+                    <button
+                      key={pageNum}
+                      onClick={() => handlePageChange(pageNum)}
+                      className={`h-9 w-9 text-xs font-bold transition-all border ${
+                        currentPage === pageNum
+                          ? 'bg-[#111111] text-white border-[#111111]'
+                          : 'bg-white text-[#111111] border-[#E8E8E8] hover:bg-[#F7F7F5]'
+                      }`}
+                    >
+                      {pageNum + 1}
+                    </button>
+                  ))}
+
+                  {/* Next Button */}
+                  <button
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage >= totalPages - 1}
+                    className="flex items-center justify-center h-9 px-3 text-xs font-semibold border border-[#E8E8E8] bg-white text-[#111111] hover:bg-[#F7F7F5] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                  >
+                    Next <ChevronRight className="h-4 w-4 ml-1" />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

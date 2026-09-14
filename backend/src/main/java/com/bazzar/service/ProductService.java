@@ -1,6 +1,7 @@
 package com.bazzar.service;
 
 import com.bazzar.dto.request.ProductRequest;
+import com.bazzar.dto.response.PageResponse;
 import com.bazzar.dto.response.ProductResponse;
 import com.bazzar.entity.Category;
 import com.bazzar.entity.Product;
@@ -8,10 +9,17 @@ import com.bazzar.entity.ProductStatus;
 import com.bazzar.exception.ResourceNotFoundException;
 import com.bazzar.repository.CategoryRepository;
 import com.bazzar.repository.ProductRepository;
+import com.bazzar.repository.StoreRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -25,15 +33,18 @@ public class ProductService {
     private final CategoryRepository categoryRepository;
     private final CategoryService categoryService;
     private final StoreAdminService storeAdminService;
+    private final StoreRepository storeRepository;
 
     public ProductService(ProductRepository productRepository,
                           CategoryRepository categoryRepository,
                           CategoryService categoryService,
-                          StoreAdminService storeAdminService) {
+                          StoreAdminService storeAdminService,
+                          StoreRepository storeRepository) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
         this.categoryService = categoryService;
         this.storeAdminService = storeAdminService;
+        this.storeRepository = storeRepository;
     }
 
     /** Returns only APPROVED products for the public storefront. */
@@ -61,9 +72,67 @@ public class ProductService {
                     .collect(Collectors.toList());
         }
 
+        // Bulk fetch stores into map to eliminate N+1 queries for 400 products
+        Map<Long, com.bazzar.entity.Store> storeMap = new HashMap<>();
+        try {
+            storeRepository.findAll().forEach(s -> {
+                if (s.getUser() != null) {
+                    storeMap.put(s.getUser().getId(), s);
+                }
+            });
+        } catch (Exception ignored) {}
+
         return products.stream()
-                .map(storeAdminService::toProductResponse)
+                .map(p -> storeAdminService.toProductResponse(p, storeMap, null))
                 .collect(Collectors.toList());
+    }
+
+    /** Returns paginated APPROVED products for public storefront catalog. */
+    public PageResponse<ProductResponse> getPaginatedProducts(
+            String search, String category, int page, int size, String sortBy, String sortDir) {
+
+        String cleanSearch = (search != null && !search.trim().isEmpty()) ? search.trim() : null;
+        String cleanCategory = (category != null && !category.trim().isEmpty()) ? category.trim() : null;
+
+        Sort.Direction direction = "desc".equalsIgnoreCase(sortDir) ? Sort.Direction.DESC : Sort.Direction.ASC;
+        String sortProperty = (sortBy == null || sortBy.trim().isEmpty()) ? "id" : sortBy.trim();
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortProperty));
+
+        Page<Product> productPage;
+        if (cleanSearch == null && cleanCategory == null) {
+            productPage = productRepository.findByStatus(ProductStatus.APPROVED, pageable);
+        } else if (cleanSearch == null) {
+            productPage = productRepository.findByCategoryNameIgnoreCaseAndStatus(cleanCategory, ProductStatus.APPROVED, pageable);
+        } else if (cleanCategory == null) {
+            productPage = productRepository.findBySearchAndStatus(cleanSearch, ProductStatus.APPROVED, pageable);
+        } else {
+            productPage = productRepository.findByCategoryNameIgnoreCaseAndSearchAndStatus(
+                    cleanCategory, cleanSearch, ProductStatus.APPROVED, pageable);
+        }
+
+        // Bulk fetch stores into map to eliminate N+1 queries
+        Map<Long, com.bazzar.entity.Store> storeMap = new HashMap<>();
+        try {
+            storeRepository.findAll().forEach(s -> {
+                if (s.getUser() != null) {
+                    storeMap.put(s.getUser().getId(), s);
+                }
+            });
+        } catch (Exception ignored) {}
+
+        List<ProductResponse> content = productPage.getContent().stream()
+                .map(p -> storeAdminService.toProductResponse(p, storeMap, null))
+                .collect(Collectors.toList());
+
+        return PageResponse.<ProductResponse>builder()
+                .content(content)
+                .pageNumber(productPage.getNumber())
+                .pageSize(productPage.getSize())
+                .totalElements(productPage.getTotalElements())
+                .totalPages(productPage.getTotalPages())
+                .first(productPage.isFirst())
+                .last(productPage.isLast())
+                .build();
     }
 
     /** Returns an APPROVED product by ID, or throws 404. */

@@ -2,6 +2,8 @@ package com.bazzar.repository;
 
 import com.bazzar.entity.Product;
 import com.bazzar.entity.ProductStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -14,10 +16,17 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     // ── Public listing (only APPROVED) ──────────────────────────────────────
     List<Product> findByStatus(ProductStatus status);
 
+    Page<Product> findByStatus(ProductStatus status, Pageable pageable);
+
     List<Product> findByCategoryNameIgnoreCaseAndStatus(String categoryName, ProductStatus status);
+
+    Page<Product> findByCategoryNameIgnoreCaseAndStatus(String categoryName, ProductStatus status, Pageable pageable);
 
     List<Product> findByNameContainingIgnoreCaseOrDescriptionContainingIgnoreCaseAndStatus(
             String name, String description, ProductStatus status);
+
+    @Query("SELECT p FROM Product p WHERE (LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(p.description) LIKE LOWER(CONCAT('%', :search, '%'))) AND p.status = :status")
+    Page<Product> findBySearchAndStatus(@Param("search") String search, @Param("status") ProductStatus status, Pageable pageable);
 
     @Query("SELECT p FROM Product p WHERE LOWER(p.category.name) = LOWER(:category) AND " +
            "(LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(p.description) LIKE LOWER(CONCAT('%', :search, '%'))) " +
@@ -26,6 +35,15 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             @Param("category") String category,
             @Param("search") String search,
             @Param("status") ProductStatus status);
+
+    @Query("SELECT p FROM Product p WHERE LOWER(p.category.name) = LOWER(:category) AND " +
+           "(LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(p.description) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+           "AND p.status = :status")
+    Page<Product> findByCategoryNameIgnoreCaseAndSearchAndStatus(
+            @Param("category") String category,
+            @Param("search") String search,
+            @Param("status") ProductStatus status,
+            Pageable pageable);
 
     // ── Store Admin: own products ────────────────────────────────────────────
     List<Product> findByStoreAdminId(Long storeAdminId);

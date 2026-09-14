@@ -1,4 +1,4 @@
-import { ProductFilterParams } from '@/types/product';
+import { ProductFilterParams, PaginatedProductsResponse } from '@/types/product';
 import { apiFetch, apiFetchNoBody } from './client';
 
 // Backend product response shape
@@ -10,6 +10,16 @@ export interface BackendProduct {
   stock: number;
   image: string;
   category: { id: number; name: string };
+}
+
+export interface BackendPageResponse<T> {
+  content: T[];
+  pageNumber: number;
+  pageSize: number;
+  totalElements: number;
+  totalPages: number;
+  first: boolean;
+  last: boolean;
 }
 
 // Normalized frontend product shape
@@ -41,37 +51,50 @@ function normalize(p: BackendProduct): Product {
   };
 }
 
-export async function getProducts(params?: ProductFilterParams): Promise<Product[]> {
+export async function getProducts(params?: ProductFilterParams): Promise<PaginatedProductsResponse> {
   const query = new URLSearchParams();
   if (params?.search) query.set('search', params.search);
   if (params?.category && params.category.toLowerCase() !== 'all')
     query.set('category', params.category);
 
-  const qs = query.toString();
-  const raw = await apiFetch<BackendProduct[]>(`/products${qs ? `?${qs}` : ''}`);
-  let result = raw.map(normalize);
+  if (params?.page !== undefined) query.set('page', String(params.page));
+  if (params?.size !== undefined) query.set('size', String(params.size));
+  if (params?.sortDir) query.set('sortDir', params.sortDir);
 
-  // Client-side filtering for price/sort (not in backend)
+  const qs = query.toString();
+  const raw = await apiFetch<BackendPageResponse<BackendProduct>>(`/products${qs ? `?${qs}` : ''}`);
+
+  let items = (raw.content || []).map(normalize);
+
+  // Client-side filtering for price/sort (if client specified)
   if (params?.minPrice !== undefined)
-    result = result.filter((p) => p.price >= params.minPrice!);
+    items = items.filter((p) => p.price >= params.minPrice!);
   if (params?.maxPrice !== undefined)
-    result = result.filter((p) => p.price <= params.maxPrice!);
+    items = items.filter((p) => p.price <= params.maxPrice!);
 
   if (params?.sortBy) {
     switch (params.sortBy) {
       case 'price-asc':
-        result.sort((a, b) => a.price - b.price);
+        items.sort((a, b) => a.price - b.price);
         break;
       case 'price-desc':
-        result.sort((a, b) => b.price - a.price);
+        items.sort((a, b) => b.price - a.price);
         break;
       case 'name':
-        result.sort((a, b) => a.name.localeCompare(b.name));
+        items.sort((a, b) => a.name.localeCompare(b.name));
         break;
     }
   }
 
-  return result;
+  return {
+    content: items,
+    pageNumber: raw.pageNumber ?? 0,
+    pageSize: raw.pageSize ?? 12,
+    totalElements: raw.totalElements ?? items.length,
+    totalPages: raw.totalPages ?? 1,
+    first: raw.first ?? true,
+    last: raw.last ?? true,
+  };
 }
 
 export async function getProductById(id: string): Promise<Product | null> {
@@ -84,9 +107,8 @@ export async function getProductById(id: string): Promise<Product | null> {
 }
 
 export async function getFeaturedProducts(): Promise<Product[]> {
-  const all = await getProducts();
-  // Featured = first 8 products (newest seeded ones)
-  return all.slice(0, 8);
+  const res = await getProducts({ page: 0, size: 8 });
+  return res.content;
 }
 
 export async function createProduct(data: {

@@ -73,17 +73,17 @@ public class OrderService {
 
         List<CartItemData> itemsToProcess = new ArrayList<>();
 
-        if (cart != null && cart.getItems() != null && !cart.getItems().isEmpty()) {
-            for (CartItem cartItem : cart.getItems()) {
-                itemsToProcess.add(new CartItemData(cartItem.getProduct(), cartItem.getQuantity()));
-            }
-        } else if (request.getItems() != null && !request.getItems().isEmpty()) {
+        if (request.getItems() != null && !request.getItems().isEmpty()) {
             for (OrderRequest.OrderItemPayload itemPayload : request.getItems()) {
                 if (itemPayload.getProductId() != null && itemPayload.getQuantity() != null && itemPayload.getQuantity() > 0) {
                     Product product = productRepository.findById(itemPayload.getProductId())
                             .orElseThrow(() -> new BadRequestException("Product not found with ID: " + itemPayload.getProductId()));
                     itemsToProcess.add(new CartItemData(product, itemPayload.getQuantity()));
                 }
+            }
+        } else if (cart != null && cart.getItems() != null && !cart.getItems().isEmpty()) {
+            for (CartItem cartItem : cart.getItems()) {
+                itemsToProcess.add(new CartItemData(cartItem.getProduct(), cartItem.getQuantity()));
             }
         }
 
